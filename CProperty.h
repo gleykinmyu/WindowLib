@@ -1,34 +1,26 @@
 #ifndef CPROPERTY_H
 #define CPROPERTY_H
 
-
-#define RWInit(getter, setter) _Init(this, getter, setter)
-#define ROInit(getter)         _Init(this, getter, NULL)
-#define WOInit(setter)         _Init(this, NULL, setter)
-
 enum MemoryAccess { RW, RO, WO };
 
-template<MemoryAccess Access, class DataType, class OwnerType>
-class CProperty;
+template<MemoryAccess Access, class DataType, class ParentType> class CProperty;
 
-template<class DataType, class OwnerType>
-class CProperty<RW, DataType, OwnerType>
+//===================================READ-WRITE========================================
+template<class DataType, class ParentType>
+class CProperty<RW, DataType, ParentType>
 {
-private:
-	typedef DataType(OwnerType::*GETTER)();
-	typedef void    (OwnerType::*SETTER)(const DataType);
+	typedef DataType(ParentType::*GETTER)() const;
+	typedef void    (ParentType::*SETTER)(const DataType);
 
-	OwnerType* m_Owner;
-	GETTER     m_Getter;
-	SETTER     m_Setter;
 public:
-	void _Init(OwnerType* Owner, GETTER Getter, SETTER Setter)
+	void Init(ParentType* Parent, GETTER Getter, SETTER Setter)
 	{
-		m_Owner = Owner;
+		m_Owner = Parent;
 		m_Getter = Getter;
 		m_Setter = Setter;
 	}
-	
+
+//=================================OPERATORS==========================================
 	void operator = (DataType Data)
 	{
 		(m_Owner->*m_Setter)(Data);
@@ -38,56 +30,63 @@ public:
 	{
 		return (m_Owner->*m_Getter)();
 	}
-};
 
-template<class DataType, class OwnerType>
-class CProperty<RO, DataType, OwnerType>
-{
+//====================================================================================
 private:
-	typedef DataType(OwnerType::*GETTER)();
-	typedef void    (OwnerType::*SETTER)(const DataType);
-
-	OwnerType* m_Owner;
+	ParentType* m_Owner;
 	GETTER     m_Getter;
 	SETTER     m_Setter;
+};
+
+//===================================READ-ONLY========================================
+template<class DataType, class ParentType>
+class CProperty<RO, DataType, ParentType>
+{
+	typedef DataType(ParentType::*GETTER)() const;
+
 public:
-	void _Init(OwnerType* Owner, GETTER Getter, SETTER Setter)
+	void Init(ParentType* Parent, GETTER Getter)
 	{
-		m_Owner = Owner;
+		m_Owner = Parent;
 		m_Getter = Getter;
-		m_Setter = Setter;
 	}
+
+//=================================OPERATORS===========================================
 	operator DataType()
 	{
 		return (m_Owner->*m_Getter)();
-	} 
+	}
+
+//=====================================================================================
+private:
+	ParentType* m_Owner;
+	GETTER      m_Getter;
+
 };
 
-
-template<class DataType, class OwnerType>
-class CProperty<WO, DataType, OwnerType>
+//===================================WRITE-ONLY========================================
+template<class DataType, class ParentType>
+class CProperty<WO, DataType, ParentType>
 {
-private:
-	typedef DataType(OwnerType::*GETTER)();
-	typedef void    (OwnerType::*SETTER)(const DataType);
+	typedef void    (ParentType::*SETTER)(const DataType);
 
-	OwnerType* m_Owner;
-	GETTER     m_Getter;
-	SETTER     m_Setter;
 public:
-	void _Init(OwnerType* Owner, GETTER Getter, SETTER Setter)
+	void Init(ParentType* Parent, SETTER Setter)
 	{
-		m_Owner = Owner;
-		m_Getter = Getter;
+		m_Owner = Parent;
 		m_Setter = Setter;
 	}
 
+//=================================OPERATORS===========================================
 	void operator = (DataType Data)
 	{
 		(m_Owner->*m_Setter)(Data);
 	}
-};
 
-//====================================================BASE PROPERTY TYPES==================================================================
+//=====================================================================================
+private:
+	ParentType* m_Owner;
+	SETTER     m_Setter;
+};
 
 #endif //CPROPERTY_H
