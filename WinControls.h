@@ -1,17 +1,17 @@
 #pragma once
 #include "WinLib.h"
 
-class CControl : public CBaseWindowC
+class CControl : public CWindowChild
 {
 public:
-	CControl(CBaseWindow& Parent, ClassInfo& ClsInfo) : CBaseWindowC(ClsInfo) {}
+	CControl(CWindowContainer* Parent, ClassInfo& ClsInfo) : CWindowChild(Parent, ClsInfo) {}
 };
 
-class CStdControls : public CBaseWindowC
+class CStdControls : public CControl
 {
 public:
-	CStdControls(LPCTSTR WinControlName, LPCTSTR LibControlName) :
-		CBaseWindowC(m_WinClassInitialize(WinControlName, LibControlName, ClassInfo())) {}
+	CStdControls(LPCTSTR WinControlName, LPCTSTR LibControlName, CWindowContainer* Parent) :
+		CControl(Parent, m_WinClassInitialize(WinControlName, LibControlName, ClassInfo())) {}
 private:
 	WNDPROC m_ControlProcedure;
 
@@ -27,23 +27,37 @@ bool CStdControls::MessageProcessor(LRESULT* Result, UINT Message, WPARAM WParam
 
 ClassInfo& CStdControls::m_WinClassInitialize(LPCTSTR WinControlName, LPCTSTR LibControlName, ClassInfo& ClsInfo)
 {
-	int er = GetClassInfoEx(Application.hInstance, WinControlName, &ClsInfo.WindowStruct);
+	WNDCLASSEX WndStruct;
+	GetClassInfoEx(_Application.hInstance, WinControlName, &WndStruct);
 
-	m_ControlProcedure = ClsInfo.WindowStruct.lpfnWndProc;
-
-	ClsInfo.WindowStruct.cbSize = sizeof(ClsInfo.WindowStruct);
-	ClsInfo.WindowStruct.lpfnWndProc = StartWindowProcedure;
-	ClsInfo.WindowStruct.lpszClassName = LibControlName;
-
+	m_ControlProcedure = WndStruct.lpfnWndProc;
+	ClsInfo.ClassStruct.ClassName = LibControlName;
 	return ClsInfo;
 }
 
 class CWinButton : public CStdControls
 {
 public:
-	CWinButton() : CStdControls(L"BUTTON", L"WinButton") {}
+	CWinButton(CWindowContainer* Parent) : CStdControls(L"BUTTON", L"WinButton", Parent) {}
+	struct ClickInfo
+	{
+		UINT Flags;
+		UINT Left;
+		UINT Top;
+	};
+private:
+	virtual void MessagePostProcessor(UINT Message, WPARAM WParam, LPARAM LParam)
+	{
+		if (Message == WM_LBUTTONDOWN)
+			Parent->ChildProcessor(this, (UINT)WParam, (UINT)LOWORD(LParam), (UINT)HIWORD(LParam));
+	}
+#define GETARGS_BTN_CLICK(Struct) do { va_list ArgPtr; va_start(ArgPtr, Caller); \
+									        Struct.Flags = va_arg(ArgPtr, UINT); \
+                                             Struct.Left = va_arg(ArgPtr, UINT); \
+                                              Struct.Top = va_arg(ArgPtr, UINT); } while(0)
 };
 
+/*
 class CWinEdit : public CStdControls
 {
 public:
@@ -73,3 +87,4 @@ class CWinScrollBar : public CStdControls
 public:
 	CWinScrollBar() : CStdControls(L"SCROLLBAR", L"WinScrollBar") {}
 };
+*/

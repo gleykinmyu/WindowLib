@@ -8,24 +8,48 @@
 
 #define WINASSERT(expression) if(!(expression)) assert(!"Window id not exist!!!");
 
-class CApplication
+
+class CChild;
+class CContainer;
+
+class CContainer
+{
+public:
+	CContainer() {}
+
+	virtual bool ChildProcessor(CChild* Caller, ...) = 0;
+};
+
+class CChild
+{
+
+public:
+	CChild(CContainer* _Parent) : Parent(_Parent) {}
+	CContainer* Parent;
+};
+
+class CApplication : public CContainer
 {
 public:
 	CApplication() { }
 	HINSTANCE hInstance;
+	virtual bool ChildProcessor(CChild* Caller, ...)
+	{
+		return false;
+	}
 };
 
-CApplication Application;
+CApplication _Application;
+
+CApplication* Application = &_Application;
+
 
 //CBaseWindow - base class of WinLibrary
 class CBaseWindow
 {
-public:
-	CBaseWindow() : m_Handle(NULL), m_Exist(false) {}
-	HWND GetHandle() const { return m_Handle; }
 private:
-	HWND m_Handle;
-	bool m_Exist;
+	HWND m_Handle = NULL;
+	bool m_Exist  = false;
 //==============================================================================================================================
 public:
 
@@ -60,46 +84,40 @@ public:
 		return true;
 	}
 //=========================================================================================================================================
-	HWND GetHandle() 
+	HWND GetHandle() const
 	{ 
 		WINASSERT(m_Exist);
 		return m_Handle; 
 	}
 
-	LONG_PTR GetWndStyle()
+	LONG_PTR GetWndStyle() const
 	{
 		WINASSERT(m_Exist);
 		return GetWindowLongPtr(m_Handle, GWL_STYLE);
 	}
 
-	LONG_PTR GetWndExStyle()
+	LONG_PTR GetWndExStyle() const
 	{
 		WINASSERT(m_Exist);
 		return GetWindowLongPtr(m_Handle, GWL_EXSTYLE);
 	}
 
-	WNDPROC GetWndProc()
+	WNDPROC GetWndProc() const
 	{
 		WINASSERT(m_Exist);
 		return (WNDPROC)GetWindowLongPtr(m_Handle, GWLP_WNDPROC);
 	}
 
-	HINSTANCE GetWndInstance()
+	HINSTANCE GetWndInstance() const
 	{
 		WINASSERT(m_Exist);
 		return (HINSTANCE)GetWindowLongPtr(m_Handle, GWLP_HINSTANCE);
 	}
 
-	HWND GetWndParent()
+	HWND GetWndParentH() const
 	{
 		WINASSERT(m_Exist);
 		return (HWND)GetWindowLongPtr(m_Handle, GWLP_HWNDPARENT);
-	}
-
-	LONG_PTR GetWndID()
-	{
-		WINASSERT(m_Exist);
-		return GetWindowLongPtr(m_Handle, GWLP_ID);
 	}
 
 	static CBaseWindow* GetWndThis(HWND Handle)
@@ -107,6 +125,13 @@ public:
 		WINASSERT(IsWindow(Handle));
 		return (CBaseWindow*)GetWindowLongPtr(Handle, GWLP_USERDATA);
 	}
+
+	LONG_PTR GetWndID() const
+	{
+		WINASSERT(m_Exist);
+		return GetWindowLongPtr(m_Handle, GWLP_ID);
+	}
+
 //=========================================================================================================================================
 	void SetHandle(HWND Handle)
 	{
@@ -161,7 +186,7 @@ public:
 	}
 
 //=========================================================================================================================================
-	HWND SetWndParent(HWND newParent)
+	void SetWndParentH(HWND newParent)
 	{
 		WINASSERT(m_Exist);
 		if (newParent == NULL)
@@ -174,7 +199,7 @@ public:
 			SetWndStyle(Style | WS_CHILD);
 		}
 		SetLastError(0);
-		return SetParent(m_Handle, newParent);
+		SetParent(m_Handle, newParent);
 	}
 
 //=========================================================================================================================================
@@ -185,14 +210,14 @@ public:
 		return false;
 	}
 
-	int GetWndText(LPTSTR Text, int Quantity)
+	int GetWndText(LPTSTR Text, int Quantity) const
 	{
 		WINASSERT(m_Exist);
 		return GetWindowText(m_Handle, Text, Quantity);
 	}
 
 //=========================================================================================================================================
-	bool GetWndRect(LPRECT Rect)
+	bool GetWndRect(LPRECT Rect) const
 	{
 		WINASSERT(m_Exist);
 		if ( GetWindowRect(m_Handle, Rect) ) return true;
@@ -308,59 +333,81 @@ CYourClass(ClassInfo& ClassInfo) : CBaseClass(ClassInfo.ClassName(L"CYourClass")
 class ClassInfo
 {
 public:
-	WNDCLASSEX WindowStruct;
+	struct CLASSINFOEX
+	{
+		UINT        Style;
+
+		HICON       hIcon;
+		HICON       hIconSm;
+		HCURSOR     hCursor;
+		HBRUSH      Background;
+
+		LPCWSTR     MenuName;
+		LPCWSTR     ClassName;
+	};
+
+	CLASSINFOEX ClassStruct;
+
 	ClassInfo()
 	{
-		WindowStruct.cbSize = sizeof(WNDCLASSEX);
 
-		WindowStruct.style = CS_HREDRAW | CS_VREDRAW;
-		WindowStruct.lpfnWndProc = NULL;
-
-		WindowStruct.cbClsExtra = 0;
-		WindowStruct.cbWndExtra = sizeof(this);
-
-		WindowStruct.hInstance = Application.hInstance;
-
-		WindowStruct.hIcon = 0;
-		WindowStruct.hCursor = LoadCursor(0, IDC_ARROW);
-		WindowStruct.hbrBackground = HBRUSH(COLOR_WINDOW);
-		WindowStruct.lpszMenuName = 0;
-		WindowStruct.lpszClassName = L"DefaultClass";
-		WindowStruct.hIconSm = 0;
+		ClassStruct.Style = CS_HREDRAW | CS_VREDRAW;
+		ClassStruct.hIcon = 0;
+		ClassStruct.hCursor = LoadCursor(0, IDC_ARROW);
+		ClassStruct.Background = HBRUSH(COLOR_WINDOW);
+		ClassStruct.MenuName = 0;
+		ClassStruct.ClassName = L"DefaultClass";
+		ClassStruct.hIconSm = 0;
 	}
 	//====================================================================================================
-	ClassInfo& NStyle    (UINT      _Style)     { WindowStruct.style         = _Style;     return *this; }
-	ClassInfo& Style     (UINT      _Style)     { WindowStruct.style        |= _Style;     return *this; }
+	ClassInfo& NStyle    (UINT      _Style)     { ClassStruct.Style         = _Style;     return *this; }
+	ClassInfo& Style     (UINT      _Style)     { ClassStruct.Style        |= _Style;     return *this; }
 	//====================================================================================================
-	ClassInfo& ClassName (LPCTSTR   _ClassName) { WindowStruct.lpszClassName = _ClassName; return *this; }
-	ClassInfo& Instance  (HINSTANCE _Instance)  { WindowStruct.hInstance     = _Instance;  return *this; }
-	ClassInfo& Icon      (HICON     _Icon)      { WindowStruct.hIcon         = _Icon;      return *this; }
-	ClassInfo& Cursor    (HCURSOR   _Cursor)    { WindowStruct.hCursor       = _Cursor;    return *this; }
-	ClassInfo& Background(HBRUSH    _Brush)     { WindowStruct.hbrBackground = _Brush;     return *this; }
-	ClassInfo& MenuName  (LPCTSTR   _MenuName)  { WindowStruct.lpszMenuName  = _MenuName;  return *this; }
-	ClassInfo& IconSm    (HICON     _Icon)      { WindowStruct.hIcon         = _Icon;      return *this; }
-	ClassInfo& WndProc   (WNDPROC   _WndProc)   { WindowStruct.lpfnWndProc   = _WndProc;   return *this; }
-	//====================================================================================================
-	ClassInfo& WndStruct (WNDCLASSEX _WndClass) { WindowStruct               = _WndClass;  return *this; }
+	ClassInfo& ClassName (LPCTSTR   _ClassName) { ClassStruct.ClassName     = _ClassName; return *this; }
+	ClassInfo& Icon      (HICON     _Icon)      { ClassStruct.hIcon         = _Icon;      return *this; }
+	ClassInfo& IconSm    (HICON     _IconSm)    { ClassStruct.hIconSm       = _IconSm;    return *this; }
+	ClassInfo& Cursor    (HCURSOR   _Cursor)    { ClassStruct.hCursor       = _Cursor;    return *this; }
+	ClassInfo& Background(HBRUSH    _Brush)     { ClassStruct.Background    = _Brush;     return *this; }
+	ClassInfo& MenuName  (LPCTSTR   _MenuName)  { ClassStruct.MenuName      = _MenuName;  return *this; }
 };
 
 //CBaseWindowR : R - Register - this class add Registering in CBaseWindow
 class  CBaseWindowR : public CBaseWindowM
 {
 public:
-	CBaseWindowR(ClassInfo& ClassInfo) : ClassAtom(0), ClassName(ClassInfo.WindowStruct.lpszClassName)
+	CBaseWindowR(ClassInfo& ClsInfo, WNDPROC WndProc)
 	{
-		if (ClassInfo.WindowStruct.lpfnWndProc == NULL)
-		{
-			ClassInfo.WindowStruct.lpfnWndProc = StartWindowProcedure;
-		}
+		WNDCLASSEX WindowStruct = {};
 
-		ClassAtom = RegisterClassEx(&(ClassInfo.WindowStruct));
+		WndProc ? WindowStruct.lpfnWndProc = WndProc : WindowStruct.lpfnWndProc = StartWindowProcedure;
+		
+		WindowStruct.style         = ClsInfo.ClassStruct.Style;
+
+		WindowStruct.lpszClassName = ClsInfo.ClassStruct.ClassName;
+		ClassName                  = ClsInfo.ClassStruct.ClassName;
+
+		WindowStruct.hIcon         = ClsInfo.ClassStruct.hIcon;
+		WindowStruct.hIconSm       = ClsInfo.ClassStruct.hIconSm;
+		
+		WindowStruct.hCursor       = ClsInfo.ClassStruct.hCursor;
+		WindowStruct.hbrBackground = ClsInfo.ClassStruct.Background;
+		WindowStruct.lpszMenuName  = ClsInfo.ClassStruct.MenuName;
+		WindowStruct.hInstance     = _Application.hInstance;
+
+		WindowStruct.cbSize        = sizeof(WNDCLASSEX);
+
+		WindowStruct.cbWndExtra    = sizeof(this);
+		WindowStruct.cbClsExtra    = 0;
+
+		ClassAtom = RegisterClassEx(&(WindowStruct));
 	}
-
-protected:
+	inline ATOM    GetWndAtom()      const { return ClassAtom; }
+	inline LPCTSTR GetWndClassName() const { return ClassName; }
+//=================================================================================================
+private:
 	ATOM    ClassAtom;
 	LPCTSTR ClassName;
+
 };
 
 //=========================================================================================================================================
@@ -370,87 +417,88 @@ protected:
 //                                                           /\ 
 //                                                           ||
 //                                                       Enter here setters, you need. 
+
 class WndInfo
 {
+public:
 	struct WNDINFOEX
 	{
-		DWORD        i_Style;
-		DWORD        i_ExStyle;
-		LPCTSTR      i_WindowName;
-		int          i_Top;
-		int          i_Left;
-		int          i_Width;
-		int          i_Height;
-		HMENU        i_Menu;
-		HWND         i_Parent;
-		HINSTANCE    i_Instance;
+		DWORD        Style;
+		DWORD        ExStyle;
+		LPCTSTR      WindowName;
+		int          Top;
+		int          Left;
+		int          Width;
+		int          Height;
+		HMENU        Menu;
 	};
-public:
+	
 	WNDINFOEX WindowStruct;
+
 	WndInfo()
 	{
-		WindowStruct.i_Style      = WS_CLIPCHILDREN | WS_VISIBLE;
-		WindowStruct.i_ExStyle    = 0;
+		WindowStruct.Style      = WS_CLIPCHILDREN | WS_VISIBLE;
+		WindowStruct.ExStyle    = 0;
 
-		WindowStruct.i_WindowName = L"Default Window Name";
+		WindowStruct.WindowName = L"Default Window Name";
 
-		WindowStruct.i_Top      = 20;
-		WindowStruct.i_Left     = 20;
-		WindowStruct.i_Width    = 50;
-		WindowStruct.i_Height   = 50;
+		WindowStruct.Top      = 20;
+		WindowStruct.Left     = 20;
+		WindowStruct.Width    = 50;
+		WindowStruct.Height   = 50;
 
-		WindowStruct.i_Parent   = NULL;
-		WindowStruct.i_Menu     = 0;
-		WindowStruct.i_Instance = 0;
+		WindowStruct.Menu     = 0;
 	}
 	//============================================================================================================
-	WndInfo& NStyle  (DWORD _Style)             { WindowStruct.i_Style      = _Style;              return *this; }
-	WndInfo& NExStyle(DWORD _ExStyle)           { WindowStruct.i_ExStyle    = _ExStyle;            return *this; }
+	WndInfo& NStyle  (DWORD _Style)             { WindowStruct.Style      = _Style;              return *this; }
+	WndInfo& NExStyle(DWORD _ExStyle)           { WindowStruct.ExStyle    = _ExStyle;            return *this; }
 	//============================================================================================================
-	WndInfo& Style   (DWORD _Style)             { WindowStruct.i_Style     |= _Style;              return *this; }
-	WndInfo& ExStyle (DWORD _ExStyle)           { WindowStruct.i_ExStyle   |= _ExStyle;            return *this; }
+	WndInfo& Style   (DWORD _Style)             { WindowStruct.Style     |= _Style;              return *this; }
+	WndInfo& ExStyle (DWORD _ExStyle)           { WindowStruct.ExStyle   |= _ExStyle;            return *this; }
 	//============================================================================================================
-	WndInfo& WindowName(LPCTSTR _WindowName)    { WindowStruct.i_WindowName = _WindowName;         return *this; }
+	WndInfo& WindowName(LPCTSTR _WindowName)    { WindowStruct.WindowName = _WindowName;         return *this; }
 	//============================================================================================================
-	WndInfo& Top   (int _Top)                   { WindowStruct.i_Top        = _Top;                return *this; }
-	WndInfo& Left  (int _Left)                  { WindowStruct.i_Left       = _Left;               return *this; }
-	WndInfo& Pos   (int _Top, int _Left)        { WindowStruct.i_Top        = _Top;                
-	                                              WindowStruct.i_Left       = _Left;               return *this; }
+	WndInfo& Top   (int _Top)                   { WindowStruct.Top        = _Top;                return *this; }
+	WndInfo& Left  (int _Left)                  { WindowStruct.Left       = _Left;               return *this; }
+	WndInfo& Pos   (int _Top, int _Left)        { WindowStruct.Top        = _Top;                
+	                                              WindowStruct.Left       = _Left;               return *this; }
 	//============================================================================================================
-	WndInfo& Width (int _Width)                 { WindowStruct.i_Width      = _Width;              return *this; }
-	WndInfo& Height(int _Height)                { WindowStruct.i_Height     = _Height;             return *this; }
-	WndInfo& Size(int _Width, int _Height)      { WindowStruct.i_Width      = _Width;
-		                                          WindowStruct.i_Height     = _Height;             return *this; }
+	WndInfo& Width (int _Width)                 { WindowStruct.Width      = _Width;              return *this; }
+	WndInfo& Height(int _Height)                { WindowStruct.Height     = _Height;             return *this; }
+	WndInfo& Size(int _Width, int _Height)      { WindowStruct.Width      = _Width;
+		                                          WindowStruct.Height     = _Height;             return *this; }
 	//============================================================================================================
-	WndInfo& Menu(HMENU _Menu)                  { WindowStruct.i_Menu       = _Menu;               return *this; }
-	WndInfo& Parent(HWND _Parent)               { WindowStruct.i_Parent     = _Parent;             return *this; }
-	WndInfo& Instance(HINSTANCE _Instance)      { WindowStruct.i_Instance   = _Instance;           return *this; }
+	WndInfo& Menu(HMENU _Menu)                  { WindowStruct.Menu       = _Menu;               return *this; }
 };
+
 
 //CBaseWindowC : C - Createing - this class add Create function in CBaseWindow
 class CBaseWindowC : public CBaseWindowR
 {
 public:
-	CBaseWindowC(ClassInfo& ClassInfo) : CBaseWindowR(ClassInfo) {}
-	bool Create(WndInfo& WndInfo)
+	CBaseWindowC(ClassInfo& ClassInfo, WNDPROC WndProc) 
+		: CBaseWindowR(ClassInfo, WndProc) {}
+
+	bool Create(WndInfo& WndInfo, HWND Parent)
 	{
 		return CBaseWindow::Create(
-			WndInfo.WindowStruct.i_ExStyle,
-			ClassName, 
-			WndInfo.WindowStruct.i_WindowName,
-			WndInfo.WindowStruct.i_Style,
-			WndInfo.WindowStruct.i_Left,
-			WndInfo.WindowStruct.i_Top,
-			WndInfo.WindowStruct.i_Width,
-			WndInfo.WindowStruct.i_Height,
-			WndInfo.WindowStruct.i_Parent,
-			WndInfo.WindowStruct.i_Menu,
-			WndInfo.WindowStruct.i_Instance,
+			WndInfo.WindowStruct.ExStyle,
+			GetWndClassName(), 
+			WndInfo.WindowStruct.WindowName,
+			WndInfo.WindowStruct.Style,
+			WndInfo.WindowStruct.Left,
+			WndInfo.WindowStruct.Top,
+			WndInfo.WindowStruct.Width,
+			WndInfo.WindowStruct.Height,
+			Parent,
+			WndInfo.WindowStruct.Menu,
+			_Application.hInstance,
 			this);
 	}
 };
 
 //=========================================================================================================================================
+
 
 //CBaseWindowP: P - Property - Add to CBaseWindow properties
 class CBaseWindowP : public CBaseWindowC
@@ -471,54 +519,54 @@ public:
 	rwLONG_PTR pStyle;
 	rwLONG_PTR pExStyle;
 //=========================================================================================================================================
-	CBaseWindowP(ClassInfo& ClassInfo) : CBaseWindowC(ClassInfo)
+	CBaseWindowP(ClassInfo& ClassInfo) : CBaseWindowC(ClassInfo, NULL)
 	{
-		pHandle. ROInit(&CBaseWindowP::GetHandle);
-		pStyle.  RWInit(&CBaseWindowP::GetWndStyle,     &CBaseWindowP::SetWndStyle);
-		pExStyle.RWInit(&CBaseWindowP::GetWndExStyle,   &CBaseWindowP::SetWndExStyle);
-		pTop.    RWInit(&CBaseWindowP::GetWndTop,       &CBaseWindowP::SetWndTop);
-		pLeft.   RWInit(&CBaseWindowP::GetWndLeft,      &CBaseWindowP::SetWndLeft);
-		pHeight. RWInit(&CBaseWindowP::GetWndHeight,    &CBaseWindowP::SetWndHeight);
-		pWidth.  RWInit(&CBaseWindowP::GetWndWidth,     &CBaseWindowP::SetWndWidth);
+		pHandle. Init(this, &CBaseWindowP::GetHandle);
+		pStyle.  Init(this, &CBaseWindowP::GetWndStyle,     &CBaseWindowP::SetWndStyle);
+		pExStyle.Init(this, &CBaseWindowP::GetWndExStyle,   &CBaseWindowP::SetWndExStyle);
+		pTop.    Init(this, &CBaseWindowP::GetWndTop,       &CBaseWindowP::SetWndTop);
+		pLeft.   Init(this, &CBaseWindowP::GetWndLeft,      &CBaseWindowP::SetWndLeft);
+		pHeight. Init(this, &CBaseWindowP::GetWndHeight,    &CBaseWindowP::SetWndHeight);
+		pWidth.  Init(this, &CBaseWindowP::GetWndWidth,     &CBaseWindowP::SetWndWidth);
 	}
 //============GETTERS======================================================================================================================
 private:
-	void SetWndTop(int Top)
+	void SetWndTop(const int Top)
 	{
 		SetWndPos(NULL, GetWndLeft(), Top, 0, 0, SWP_NOSIZE);
 	}
-	void SetWndLeft(int Left)
+	void SetWndLeft(const int Left)
 	{
 		SetWndPos(NULL, Left, GetWndTop(), 0, 0, SWP_NOSIZE);
 	}
-	int GetWndTop()
+	int GetWndTop() const
 	{
 		RECT Rect = {};
 		GetWndRect(&Rect);
 		return Rect.top;
 	}
-	int GetWndLeft()
+	int GetWndLeft() const
 	{
 		RECT Rect = {};
 		GetWndRect(&Rect);
 		return Rect.left;
 	}
 //===========SETTERS======================================================================================================================
-	void SetWndWidth(int Width)
+	void SetWndWidth(const int Width)
 	{
 		SetWndPos(NULL, 0, 0, Width, GetWndHeight(), SWP_NOMOVE);
 	}
-	void SetWndHeight(int Height)
+	void SetWndHeight(const int Height)
 	{
 		SetWndPos(NULL, 0, 0, GetWndWidth(), Height, SWP_NOMOVE);
 	}
-	int GetWndWidth()
+	int GetWndWidth() const
 	{
 		RECT Rect = {};
 		GetWndRect(&Rect);
 		return Rect.right - Rect.left;
 	}
-	int GetWndHeight()
+	int GetWndHeight() const
 	{
 		RECT Rect = {};
 		GetWndRect(&Rect);
@@ -527,6 +575,22 @@ private:
 };
 
 //=========================================================================================================================================
+
+
+class CWindowContainer : public CBaseWindowC, public CContainer
+{
+public:
+	CWindowContainer(CContainer* Parent, ClassInfo& ClsInfo) : CBaseWindowC(ClsInfo, 0), CContainer() {};
+};
+
+class CWindowChild : public CChild, public CBaseWindowC
+{
+public:
+	CWindowChild(CWindowContainer* Parent, ClassInfo& ClsInfo) : CChild((CContainer*)Parent), CBaseWindowC(ClsInfo, NULL) { }
+	bool Create(WndInfo& Info) { return CBaseWindowC::Create(Info, ((CWindowContainer*)Parent)->GetHandle()); }
+};
+
+
 
 
 
