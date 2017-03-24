@@ -1,90 +1,80 @@
 #pragma once
 #include "WinLib.h"
 
-class CControl : public CWindowChild
+namespace wsl
 {
-public:
-	CControl(CWindowContainer* Parent, ClassInfo& ClsInfo) : CWindowChild(Parent, ClsInfo) {}
-};
-
-class CStdControls : public CControl
-{
-public:
-	CStdControls(LPCTSTR WinControlName, LPCTSTR LibControlName, CWindowContainer* Parent) :
-		CControl(Parent, m_WinClassInitialize(WinControlName, LibControlName, ClassInfo())) {}
-private:
-	WNDPROC m_ControlProcedure;
-
-	virtual bool MessageProcessor(LRESULT* Result, UINT Message, WPARAM WParam, LPARAM LParam);
-	ClassInfo& CStdControls::m_WinClassInitialize(LPCTSTR WinControlName, LPCTSTR LibControlName, ClassInfo& ClsInfo);
-};
-
-bool CStdControls::MessageProcessor(LRESULT* Result, UINT Message, WPARAM WParam, LPARAM LParam)
-{
-	*Result = CallWindowProc(m_ControlProcedure, GetHandle(), Message, WParam, LParam);
-	return true;
-}
-
-ClassInfo& CStdControls::m_WinClassInitialize(LPCTSTR WinControlName, LPCTSTR LibControlName, ClassInfo& ClsInfo)
-{
-	WNDCLASSEX WndStruct;
-	GetClassInfoEx(_Application.hInstance, WinControlName, &WndStruct);
-
-	m_ControlProcedure = WndStruct.lpfnWndProc;
-	ClsInfo.ClassStruct.ClassName = LibControlName;
-	return ClsInfo;
-}
-
-class CWinButton : public CStdControls
-{
-public:
-	CWinButton(CWindowContainer* Parent) : CStdControls(L"BUTTON", L"WinButton", Parent) {}
-	struct ClickInfo
+	class CStdControls : public CWindow
 	{
-		UINT Flags;
-		UINT Left;
-		UINT Top;
+	public:
+		CStdControls(LPCTSTR WinControlName, LPCTSTR LibControlName) :	
+			CWindow(m_WinClassInitialize(WinControlName, LibControlName, ClassInfo())) {}
+
+		LRESULT ControlProc(UINT Message, WPARAM WParam, LPARAM LParam)
+		{
+			return (*m_ControlProcedure)(GetHandle(), Message, WParam, LParam);
+		}
+
+		bool Create(CWindow* Parent, WndInfo& Info) { return CWindow::Create(Parent, Info.Style(WS_CHILD)); }
+
+	private:
+		WNDPROC m_ControlProcedure;
+
+		virtual bool MessageProcessor(LRESULT* Result, UINT Message, WPARAM WParam, LPARAM LParam);
+		ClassInfo& CStdControls::m_WinClassInitialize(LPCTSTR WinControlName, LPCTSTR LibControlName, ClassInfo& ClsInfo);
 	};
-private:
-	virtual void MessagePostProcessor(UINT Message, WPARAM WParam, LPARAM LParam)
+
+	bool CStdControls::MessageProcessor(LRESULT* Result, UINT Message, WPARAM WParam, LPARAM LParam)
 	{
-		if (Message == WM_LBUTTONDOWN)
-			Parent->ChildProcessor(this, (UINT)WParam, (UINT)LOWORD(LParam), (UINT)HIWORD(LParam));
+		*Result = ::CallWindowProc(m_ControlProcedure, GetHandle(), Message, WParam, LParam);
+		return true;
 	}
-#define GETARGS_BTN_CLICK(Struct) do { va_list ArgPtr; va_start(ArgPtr, Caller); \
-									        Struct.Flags = va_arg(ArgPtr, UINT); \
-                                             Struct.Left = va_arg(ArgPtr, UINT); \
-                                              Struct.Top = va_arg(ArgPtr, UINT); } while(0)
-};
 
-/*
-class CWinEdit : public CStdControls
-{
-public:
-	CWinEdit() : CStdControls(L"EDIT", L"WinEdit") {}
-};
+	ClassInfo& CStdControls::m_WinClassInitialize(LPCTSTR WinControlName, LPCTSTR LibControlName, ClassInfo& ClsInfo)
+	{
+		WNDCLASSEX WndStruct;
+		::GetClassInfoEx(Application->hInstance, WinControlName, &WndStruct);
 
-class CWinStatic : public CStdControls
-{
-public:
-	CWinStatic() : CStdControls(L"STATIC", L"WinStatic") {}
-};
+		m_ControlProcedure = WndStruct.lpfnWndProc;
+		ClsInfo.ClassStruct.ClassName = LibControlName;
+		return ClsInfo;
+	}
 
-class CWinComboBox : public CStdControls
-{
-public:
-	CWinComboBox() : CStdControls(L"COMBOBOX", L"WinComboBox") {}
-};
+	//======================================Standart Windows constrols =======================================
 
-class CWinListBox : public CStdControls
-{
-public:
-	CWinListBox() : CStdControls(L"LISTBOX", L"WinListBox") {}
-};
+	class CStdButton : public CStdControls
+	{
+	public:	
+		CStdButton() : CStdControls(L"BUTTON", L"WinButton") {}
+	};
 
-class CWinScrollBar : public CStdControls
-{
-public:
-	CWinScrollBar() : CStdControls(L"SCROLLBAR", L"WinScrollBar") {}
-};
-*/
+	class CStdEdit : public CStdControls
+	{
+	public:
+		CStdEdit() : CStdControls(L"EDIT", L"WinEdit") {}
+	};
+
+	class CStdStatic : public CStdControls
+	{
+	public:
+		CStdStatic() : CStdControls(L"STATIC", L"WinStatic") {}
+	};
+
+	class CStdComboBox : public CStdControls
+	{
+	public:
+		CStdComboBox() : CStdControls(L"COMBOBOX", L"WinComboBox") {}
+	};
+
+	class CStdListBox : public CStdControls
+	{
+	public:
+		CStdListBox() : CStdControls(L"LISTBOX", L"WinListBox") {}
+	};
+
+	class CStdScrollBar : public CStdControls
+	{
+	public:
+		CStdScrollBar() : CStdControls(L"SCROLLBAR", L"WinScrollBar") {}
+	};
+}
+
