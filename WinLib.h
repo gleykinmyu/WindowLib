@@ -8,6 +8,13 @@
 
 #define WINASSERT(expression) if(!(expression)) assert(!"Window id not exist!!!");
 
+#ifdef UNICODE
+#define _T L
+#endif
+
+#ifdef ANSI
+#define _T
+#endif
 
 namespace wsl
 {
@@ -223,34 +230,64 @@ namespace wsl
 
 	//=========================================================================================================================================
 
+	class CEvent
+	{
+	public:
+		WPARAM  WParam;
+		LPARAM  LParam;
+		UINT    Message;
+		LRESULT Result;
+	public:
+		CEvent(UINT _Message, WPARAM _WParam, LPARAM _LParam) : Message(_Message), WParam(_WParam), LParam(_LParam) {}
+	};
+
+	template<class OwnerType>
+	class EventProperty
+	{
+	private:
+		typedef bool (OwnerType::*Handler)(CEvent*);
+		
+		typedef void    (OwnerType::*SETTER)(Handler);
+		typedef Handler (OwnerType::*GETTER)();
+
+		SETTER Setter;
+		GETTER Getter;
+		OwnerType* Owner;
+	public:
+		void Init(OwnerType* _Owner, SETTER _Setter, GETTER _Getter)
+		{
+			Getter = _Getter;
+			Setter = _Setter;
+			Owner  = _Owner;
+		}
+
+		template<class WindowType>
+		void operator= (bool (WindowType::*EventHandler)(CEvent*))
+		{
+			 (Owner->*Setter)(reinterpret_cast<bool (OwnerType::*)(CEvent*)>(EventHandler));
+		}
+
+		template<class WindowType>
+		bool (WindowType::*operator() (CEvent*))
+		{
+			return (Owner->*Getter)(reinterpret_cast<bool (OwnerType::*)(CEvent*)>(EventHandler));
+		}
+	};
+
 	//CBaseWindowM : M - Map - this class add MessageMap in CBaseWindow
 	class CBaseWindowM : public CBaseWindow
 	{
-	public:
-#define BEGIN_MESSAGE_MAP \
-protected: \
-	virtual bool MessageProcessor(LRESULT* Result, UINT Message, WPARAM WParam, LPARAM LParam) \
-	{ \
-		switch(Message) \
-		{
-
-#define ADD_MESSAGE_HANDLER(Msg, Handler) \
-		case Msg : return Handler(Result, WParam, LParam);
-
-#define END_MESSAGE_MAP \
-		default: return false;\
-		} \
-	}
-
 	protected:
-		virtual bool    MessageProcessor(LRESULT*, UINT, WPARAM, LPARAM) = 0;
+		virtual bool MessageProcessor       (CEvent*) { return false; };
 
-		virtual void    MessagePreProcessor(UINT, WPARAM, LPARAM) { };
-		virtual void    MessagePostProcessor(UINT, WPARAM, LPARAM) { };
+		virtual bool CommandProcessor       (CEvent*) { return false; };
 
-		virtual LRESULT DefaultMessageProcessor(UINT Message, WPARAM WParam, LPARAM LParam)
+		virtual void MessagePreProcessor    (CEvent*) { };
+		virtual void MessagePostProcessor   (CEvent*) { };
+
+		virtual void DefaultMessageProcessor(CEvent* Event)
 		{
-			return DefWindowProc(GetHandle(), Message, WParam, LParam);
+			Event->Result = DefWindowProc(GetHandle(), Event->Message, Event->WParam, Event->LParam);
 		};
 
 		static LRESULT CALLBACK WindowProcedure(HWND Handle, UINT Message, WPARAM WParam, LPARAM LParam);
@@ -287,28 +324,35 @@ protected: \
 	LRESULT CALLBACK CBaseWindowM::WindowProcedure(HWND Handle, UINT Message, WPARAM WParam, LPARAM LParam)
 	{
 		CBaseWindowM* Window = GetWndThis(Handle);
-		LRESULT Result = 0;
+
+		CEvent Event(Message, WParam, LParam);
+
+		bool Handled = false;
 
 		if (Window != NULL)
 		{
-			Window->MessagePreProcessor(Message, WParam, LParam);
-			bool Handled = Window->MessageProcessor(&Result, Message, WParam, LParam);
-			Window->MessagePostProcessor(Message, WParam, LParam);
-			if (Handled == false)
+			Window->MessagePreProcessor(&Event);
+
+			switch (Message)
 			{
-				//TODO:
-				Result = Window->DefaultMessageProcessor(Message, WParam, LParam);
+			case WM_COMMAND: Handled = Window->CommandProcessor(&Event); break;
+			default:         Handled = Window->MessageProcessor(&Event); break;
 			}
-			return Result;
+
+			Window->MessagePostProcessor(&Event);	
 		}
-		return DefWindowProc(Handle, Message, WParam, LParam);
+
+		if (Handled == false)
+			Window->DefaultMessageProcessor(&Event);
+
+		return Event.Result;
 	}
 
 
 	/*========================================================================================================================================
 	ClassInfo - Help you to change some window class parmeters instead changing all parmeters in once.
 
-	USING: foo(ClassInfo&) - foo(ClassInfo().ClassName(L"BlaBla").Style(0). ... )
+	USING: foo(ClassInfo&) - foo(ClassInfo().ClassName(TEXT("BlaBla").Style(0). ... )
 	/\
 	||
 	Enter here setters, you need.
@@ -318,7 +362,7 @@ protected: \
 	ADVICE: If you create new window class - inherited from CBaseWindowR, use next syntax in your constructors:
 	class CYourClass : public CBaseClass
 	{
-	CYourClass(ClassInfo& ClassInfo) : CBaseClass(ClassInfo.ClassName(L"CYourClass")) {...}
+	CYourClass(ClassInfo& ClassInfo) : CBaseClass(ClassInfo.ClassName(TEXT("CYourClass")) {...}
 	/\
 	||
 	Write here name of your class. Windows needs it, to create your Window.
@@ -336,8 +380,8 @@ protected: \
 			HCURSOR     hCursor;
 			HBRUSH      Background;
 
-			LPCWSTR     MenuName;
-			LPCWSTR     ClassName;
+			LPCTSTR     MenuName;
+			LPCTSTR     ClassName;
 		};
 
 		CLASSINFOEX ClassStruct;
@@ -350,19 +394,19 @@ protected: \
 			ClassStruct.hCursor = LoadCursor(0, IDC_ARROW);
 			ClassStruct.Background = HBRUSH(COLOR_WINDOW);
 			ClassStruct.MenuName = 0;
-			ClassStruct.ClassName = L"DefaultClass";
+			ClassStruct.ClassName = TEXT("DefaultClass");
 			ClassStruct.hIconSm = 0;
 		}
 		//====================================================================================================
-		ClassInfo& NStyle(UINT      _Style) { ClassStruct.Style = _Style;     return *this; }
-		ClassInfo& Style(UINT      _Style) { ClassStruct.Style |= _Style;     return *this; }
+		ClassInfo& NStyle    (UINT      _Style)     { ClassStruct.Style = _Style;         return *this; }
+		ClassInfo& Style     (UINT      _Style)     { ClassStruct.Style |= _Style;        return *this; }
 		//====================================================================================================
-		ClassInfo& ClassName(LPCTSTR   _ClassName) { ClassStruct.ClassName = _ClassName; return *this; }
-		ClassInfo& Icon(HICON     _Icon) { ClassStruct.hIcon = _Icon;      return *this; }
-		ClassInfo& IconSm(HICON     _IconSm) { ClassStruct.hIconSm = _IconSm;    return *this; }
-		ClassInfo& Cursor(HCURSOR   _Cursor) { ClassStruct.hCursor = _Cursor;    return *this; }
-		ClassInfo& Background(HBRUSH    _Brush) { ClassStruct.Background = _Brush;     return *this; }
-		ClassInfo& MenuName(LPCTSTR   _MenuName) { ClassStruct.MenuName = _MenuName;  return *this; }
+		ClassInfo& ClassName (LPCTSTR   _ClassName) { ClassStruct.ClassName = _ClassName; return *this; }
+		ClassInfo& Icon      (HICON     _Icon)      { ClassStruct.hIcon = _Icon;          return *this; }
+		ClassInfo& IconSm    (HICON     _IconSm)    { ClassStruct.hIconSm = _IconSm;      return *this; }
+		ClassInfo& Cursor    (HCURSOR   _Cursor)    { ClassStruct.hCursor = _Cursor;      return *this; }
+		ClassInfo& Background(HBRUSH    _Brush)     { ClassStruct.Background = _Brush;    return *this; }
+		ClassInfo& MenuName  (LPCTSTR   _MenuName)  { ClassStruct.MenuName = _MenuName;   return *this; }
 	};
 
 	//CBaseWindowR : R - Register - this class add Registering in CBaseWindow
@@ -434,7 +478,7 @@ protected: \
 			WindowStruct.Style = WS_CLIPCHILDREN | WS_VISIBLE;
 			WindowStruct.ExStyle = 0;
 
-			WindowStruct.WindowName = L"Default Window Name";
+			WindowStruct.WindowName = TEXT("Default Window Name");
 
 			WindowStruct.Top = 20;
 			WindowStruct.Left = 20;
@@ -584,10 +628,9 @@ protected: \
 	class CDesktop : public CWindow
 	{
 	private:
-		BEGIN_MESSAGE_MAP
-		END_MESSAGE_MAP
+		
 	public:
-		CDesktop() : CWindow(ClassInfo().ClassName(L"Desktop")) { SetHandle(GetDesktopWindow()); }
+		CDesktop() : CWindow(ClassInfo().ClassName(TEXT("Desktop"))) { SetHandle(GetDesktopWindow()); }
 	};
 
 	CDesktop m_Desktop;
