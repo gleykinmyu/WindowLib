@@ -2,18 +2,18 @@
 #include <Windows.h>
 #include <assert.h>
 #include "Property.h"
-#include "WindowHandle.h"
-#include "WindowEvents.h"
-#include "ClassRegistering.h"
-#include "WindowCreating.h"
-#include "BaseWindow.h"
+#include "WLDefines.h"
+#include "Module.h"
+#include "Window.h"
+#include "WindowEvent.h"
+#include "WindowDecl.h"
+#include "WindowRoot.h"
+#include "Desktop.h"
 
 namespace wl
 {
-	//=========================================================================================================================================
-
-	/*	//CBaseWindowP: P - Property - Add to CBaseWindowH properties
-	class CBaseWindowP : public CBaseWindowC
+	/*	//CBaseWindowP: P - Property - Add to CWindow properties
+	class CBaseWindowP : public CWindowCreating
 	{
 	public:
 		typedef CProperty<RW, int, CBaseWindowP> rwINT;
@@ -31,7 +31,7 @@ namespace wl
 		rwLONG_PTR pStyle;
 		rwLONG_PTR pExStyle;
 		//=========================================================================================================================================
-		CBaseWindowP(ClassInfo& ClassInfo) : CBaseWindowC(ClassInfo, NULL)
+		CBaseWindowP(ClsInfo& ClsInfo) : CWindowCreating(ClsInfo, NULL)
 		{
 			pHandle.Init(this, &CBaseWindowP::GetHandle);
 			pStyle.Init(this, &CBaseWindowP::GetWndStyle, &CBaseWindowP::SetWndStyle);
@@ -88,17 +88,10 @@ namespace wl
 	*/
 	//=========================================================================================================================================
 
-	
 
-	class CDesktop : public CBaseWindowH
-	{
-	public:
-		CDesktop() : CBaseWindowH() { SetHandle(GetDesktopWindow()); }
-	};
 
-	CDesktop m_Desktop;
 
-    CDesktop* Desktop = &m_Desktop;
+
 
 	class CMessageLoop
 	{
