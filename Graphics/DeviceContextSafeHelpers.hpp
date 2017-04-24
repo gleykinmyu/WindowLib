@@ -8,7 +8,7 @@ namespace Graphics
 {
     typedef GraphicsDetail::CDeviceContextSafeT<CClientDCroot> CClientDCsafe;
     typedef GraphicsDetail::CDeviceContextSafeT<CWindowDCroot> CWindowDCsafe;
-    typedef GraphicsDetail::CDeviceContextSafeT<CPaintDCroot>  CPaintDCSafe;
+    typedef GraphicsDetail::CDeviceContextSafeT<CPaintDCroot>  CPaintDCsafe;
 
     class CMemoryDCsafe : public CMemoryDCroot
     {

@@ -11,6 +11,11 @@ namespace Graphics
         Height.Init(this, &CBitmap::getHeight);
     }
 
+	CBitmap::~CBitmap()
+	{
+		WL_ASSERT(isNull() == true);
+	}
+
     bool CBitmap::LoadFromFile(LPCTSTR FileName, int Width, int Height)
     {
         return Load(NULL, FileName, Width, Height, LR_LOADFROMFILE);

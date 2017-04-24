@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <WinLib/Utility.hpp>
 #include <WinLib/Graphics/DeviceContextHelpers.hpp>
+#include <WinLib/Window.hpp>
 
 namespace GraphicsDetail
 {
@@ -20,7 +21,7 @@ namespace GraphicsDetail
         inline bool selectBrush(HBRUSH Brush);
         inline bool selectFont(HFONT Font);
 
-        CDeviceContextSafeT(HWND Owner);
+        CDeviceContextSafeT(const Window::CWindowHandle Owner);
         ~CDeviceContextSafeT();
     };
 
@@ -43,11 +44,11 @@ namespace GraphicsDetail
     }
 
     template<class AncestorT>
-    CDeviceContextSafeT<AncestorT>::CDeviceContextSafeT(HWND Owner) : AncestorT(Owner)
+    CDeviceContextSafeT<AncestorT>::CDeviceContextSafeT(const Window::CWindowHandle Owner) : AncestorT(Owner)
     {
         bool Result = ((m_OwnBrush = AncestorT::getBrush()) != NULL) &&
-            ((m_OwnFont = AncestorT::getFont()) != NULL) &&
-            ((m_OwnPen = AncestorT::getPen()) != NULL);
+                      ((m_OwnFont = AncestorT::getFont())   != NULL) &&
+                      ((m_OwnPen = AncestorT::getPen())     != NULL);
         if (Result == false)
         {
             m_OwnBrush = NULL, m_OwnFont = NULL, m_OwnPen = NULL;
@@ -61,15 +62,15 @@ namespace GraphicsDetail
         bool Result = false;
 
         if (m_OwnBrush && m_OwnFont && m_OwnPen)
-            Result = (AncestorT::selectBrush(m_OwnBrush) != NULL) &&
-            (AncestorT::selectFont(m_OwnFont) != NULL) &&
-            (AncestorT::selectPen(m_OwnPen) != NULL);
+            Result = ((HBRUSH)AncestorT::selectBrush(m_OwnBrush) != NULL) &&
+                     ((HFONT) AncestorT::selectFont(m_OwnFont)   != NULL) &&
+                     ((HPEN)  AncestorT::selectPen(m_OwnPen)     != NULL);
         else
         {
             WL_TRACE("We cannot return DC own object. Memory leak possible.");
-            Result = (AncestorT::selectStockBrush(Graphics::sbNull) != NULL) &&
-                (AncestorT::selectStockFont(Graphics::sfSystem) != NULL) &&
-                (AncestorT::selectStockPen(Graphics::spNull) != NULL);
+            Result = ((HBRUSH)AncestorT::selectStockBrush(Graphics::sbNull)  != NULL) &&
+                     ((HFONT) AncestorT::selectStockFont(Graphics::sfSystem) != NULL) &&
+                     ((HPEN)  AncestorT::selectStockPen(Graphics::spNull)    != NULL);
             if (Result == false)
             {
                 WL_TRACE("We cannot do anything (");

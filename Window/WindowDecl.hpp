@@ -88,6 +88,7 @@ namespace Window
 
     protected:
         LPCTSTR wl_RegisterWindowClass(const ClsInfo& Info);
+		LPCTSTR wl_RegisterWindowSuperClass(LPCTSTR ClassName, LPCTSTR OriginClassName);
 
     private:
         inline bool wl_ClassExist(HINSTANCE Instance, LPCTSTR ClassName);
@@ -101,6 +102,13 @@ namespace Window
         static LPCTSTR wl_DeclaredClassName = wl_RegisterWindowClass(ClassInfo); \
         return wl_DeclaredClassName; \
     }
-        
+
+#define DECLARE_WINDOW_SUPERCLASS(ClassName, OriginClassName) \
+    LPCTSTR getClassName() \
+    { \
+        static LPCTSTR wl_DeclaredClassName = wl_RegisterWindowSuperClass(ClassName, OriginClassName); \
+        return wl_DeclaredClassName; \
+    }
+
 }
 #endif //!WL_WINDOW_DECL_H

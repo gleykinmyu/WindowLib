@@ -3,42 +3,30 @@
 
 #include <Windows.h>
 #include <WinLib/Utility.hpp>
-#include <WinLib/Graphics/DeviceContext.hpp>
+#include <WinLib/Graphics/ObjectHandleWraps.hpp>
 #include <WinLib/Graphics/Color.hpp>
 #include <WinLib/Graphics/Detail/BrushRoot.hpp>
 
 namespace Graphics
 {
-    enum EBrushStyle
-    {
-        bsHollow,
-        bsSolid,
-        bsHorizontal,
-        bsVertical,
-        bsFDiagonal,
-        bsBDiagonal,
-        bsCross,
-        bsDiagCross
-    };
-
-    class CBrush : public GraphicsDetail::CBrushRoot
+    
+    class CBrushDC : private GraphicsDetail::CBrushS
     {
     public:
-        CBrush();
+        CBrushDC(CDeviceContext & DC);
 
-        Utility::CProperty<Utility::RW, CColor, CBrush> Color;
-        Utility::CProperty<Utility::RW, EBrushStyle, CBrush> Style;
-
-    private:
-        void            m_ConvertToLogBrush(LOGBRUSH* LogBrush, EBrushStyle Style);
-        EBrushStyle     m_ConvertFromLogBrush(const LOGBRUSH* LogBrush) const;
-        void            m_Replace(const LOGBRUSH* LogBrush);
-
-        CColor      getColor() const;
-        EBrushStyle getStyle() const;
-
-        void setColor(CColor Color);
-        void setStyle(EBrushStyle Style);
+        Utility::CProperty<Utility::RW, CColor,      CBrushDC> Color;
+        Utility::CProperty<Utility::RW, EBrushStyle, CBrushDC> Style;
     };
+
+	class CBrush : public GraphicsDetail::CBrushG
+	{
+	public:
+		CBrush();
+
+		Utility::CProperty<Utility::RO, CColor,      CBrush> Color;
+		Utility::CProperty<Utility::RO, EBrushStyle, CBrush> Style;
+	};
+
 }
 #endif //!WL_BRUSH_H

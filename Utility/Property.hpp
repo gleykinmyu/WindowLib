@@ -12,29 +12,27 @@ namespace Utility
     class CProperty<RW, DataType, ParentType>
     {
         typedef DataType(ParentType::*GETTER)() const;
-        typedef void     (ParentType::*SETTER)(const DataType);
+        typedef void    (ParentType::*SETTER)(const DataType &);
 
     public:
         void Init(ParentType* Parent, GETTER Getter, SETTER Setter)
         {
-            m_Owner = Parent;
+            m_Owner  = Parent;
             m_Getter = Getter;
             m_Setter = Setter;
         }
 
-        //=================================OPERATORS==========================================
-
-        void operator = (const DataType Data) const
+        inline void operator = (const DataType & Data) const
         {
             (m_Owner->*m_Setter)(Data);
         }
 
-        operator DataType ()
+        inline operator DataType ()
         {
             return (m_Owner->*m_Getter)();
         }
 
-        //====================================================================================
+    
     private:
         ParentType* m_Owner;
         GETTER     m_Getter;
@@ -50,17 +48,15 @@ namespace Utility
     public:
         void Init(ParentType* Parent, GETTER Getter)
         {
-            m_Owner = Parent;
+            m_Owner  = Parent;
             m_Getter = Getter;
         }
 
-        //=================================OPERATORS===========================================
-        operator DataType()
+        inline operator DataType()
         {
             return (m_Owner->*m_Getter)();
         }
 
-        //=====================================================================================
     private:
         ParentType* m_Owner;
         GETTER      m_Getter;
@@ -71,26 +67,159 @@ namespace Utility
     template<class DataType, class ParentType>
     class CProperty<WO, DataType, ParentType>
     {
-        typedef void    (ParentType::*SETTER)(const DataType);
+        typedef void    (ParentType::*SETTER)(const DataType &);
 
     public:
         void Init(ParentType* Parent, SETTER Setter)
         {
-            m_Owner = Parent;
+            m_Owner  = Parent;
             m_Setter = Setter;
         }
 
-        //=================================OPERATORS===========================================
-        void operator = (DataType Data)
+        inline void operator = (const DataType & Data)
         {
             (m_Owner->*m_Setter)(Data);
         }
-
-        //=====================================================================================
-    private:
-        ParentType* m_Owner;
-        SETTER     m_Setter;
+	
+	private:
+        ParentType * m_Owner;
+        SETTER       m_Setter;
     };
-}
 
+
+	//================================BOOL=================================================
+
+	//===================================READ-WRITE========================================
+	template<class ParentType>
+	class CProperty<RW, bool, ParentType>
+	{
+		typedef bool(ParentType::*GETTER)() const;
+		typedef void    (ParentType::*SETTER)(bool);
+
+	public:
+		void Init(ParentType* Parent, GETTER Getter, SETTER Setter)
+		{
+			m_Owner = Parent;
+			m_Getter = Getter;
+			m_Setter = Setter;
+		}
+
+		inline void operator = (bool Data) const
+		{
+			(m_Owner->*m_Setter)(Data);
+		}
+
+		inline operator bool ()
+		{
+			return (m_Owner->*m_Getter)();
+		}
+
+
+	private:
+		ParentType* m_Owner;
+		GETTER     m_Getter;
+		SETTER     m_Setter;
+	};
+
+	//===================================READ-ONLY========================================
+	template<class ParentType>
+	class CProperty<RO, bool, ParentType>
+	{
+		typedef bool(ParentType::*GETTER)() const;
+
+	public:
+		void Init(ParentType* Parent, GETTER Getter)
+		{
+			m_Owner = Parent;
+			m_Getter = Getter;
+		}
+
+		inline operator bool()
+		{
+			return (m_Owner->*m_Getter)();
+		}
+
+	private:
+		ParentType* m_Owner;
+		GETTER      m_Getter;
+
+	};
+
+	//===================================WRITE-ONLY========================================
+	template<class ParentType>
+	class CProperty<WO, bool, ParentType>
+	{
+		typedef void    (ParentType::*SETTER)(bool);
+
+	public:
+		void Init(ParentType* Parent, SETTER Setter)
+		{
+			m_Owner = Parent;
+			m_Setter = Setter;
+		}
+
+		inline void operator = (bool Data)
+		{
+			(m_Owner->*m_Setter)(Data);
+		}
+
+	private:
+		ParentType * m_Owner;
+		SETTER       m_Setter;
+	};
+
+
+	//================================INTEGER WITH OPERATORS===============================
+
+	//===================================READ-WRITE========================================
+	template<class ParentType>
+	class CProperty<RW, int, ParentType>
+	{
+		typedef int  (ParentType::*GETTER)() const;
+		typedef void (ParentType::*SETTER)(int);
+
+	public:
+		void Init(ParentType * Parent, GETTER Getter, SETTER Setter)
+		{
+			m_Owner = Parent;
+			m_Getter = Getter;
+			m_Setter = Setter;
+		}
+
+		void inline operator = (int Data) const
+		{
+			(m_Owner->*m_Setter)(Data);
+		}
+
+		void inline operator += (int Data) const
+		{
+			(m_Owner->*m_Setter)(Data + (m_Owner->*m_Getter)());
+		}
+
+		void inline operator -= (int Data) const
+		{
+			(m_Owner->*m_Setter)(Data - (m_Owner->*m_Getter)());
+		}
+
+		void inline operator ++ () const
+		{
+			(m_Owner->*m_Setter)((m_Owner->*m_Getter)() + 1);
+		}
+
+		void inline operator -- () const
+		{
+			(m_Owner->*m_Setter)((m_Owner->*m_Getter)() - 1);
+		}
+
+		inline operator int()
+		{
+			return (m_Owner->*m_Getter)();
+		}
+
+	private:
+		ParentType* m_Owner;
+		GETTER      m_Getter;
+		SETTER      m_Setter;
+	};
+}
 #endif //CPROPERTY_HPP

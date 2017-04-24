@@ -2,64 +2,170 @@
 #define WL_WINDOW_HANDLE_H
 #include <Windows.h>
 #include <WinLib/Utility.hpp>
+#include <WinLib/Window/WindowEnums.hpp>
 
 namespace Window
 {
-	class WL_NOVTABLE CWindowHandle
+	class CWindowHandle;
+
+	struct CWindowNode
+	{
+		HWND            m_Handle = NULL;
+		CWindowHandle * m_This   = NULL;
+		CWindowNode   * m_Next   = NULL;
+	};
+
+	template<size_t Size>
+	class CWindowMap
+	{
+	public:
+		bool AddWindow   (HWND Handle, CWindowHandle * This);
+		bool DeleteWindow(HWND Handle);
+		CWindowHandle * getWindowThis(HWND Handle);
+
+	private:
+		CWindowNode * wm_FindWindowNode(HWND Handle);
+		unsigned      wm_Hash          (HWND Handle);
+
+		CWindowNode *  m_WindowMap[Size];
+	};
+
+	template<size_t Size>
+	bool CWindowMap<Size>::AddWindow(HWND Handle, CWindowHandle * This)
+	{
+		if (wm_FindWindowNode(Handle) == NULL)
+		{
+			CWindowNode * Node = new CWindowNode;
+			Node->m_Next = m_WindowMap[wm_Hash(Handle)];
+			m_WindowMap[wm_Hash(Handle)] = Node;
+
+			Node->m_Handle = Handle;
+			Node->m_This   = This;
+			return true;
+		}
+		return false;
+	}
+
+	template<size_t Size>
+	bool CWindowMap<Size>::DeleteWindow(HWND Handle)
+	{
+		CWindowNode * Node = m_WindowMap[wm_Hash(Handle)];
+		if (Node == NULL) return true;
+		if (Node->m_Handle == Handle)
+		{
+			m_WindowMap[wm_Hash(Handle)] = Node->m_Next;
+			delete Node;
+			return true;
+		}
+			
+		CWindowNode * PrevNode = m_WindowMap[wm_Hash(Handle)];
+		CWindowNode * CurNode  = PrevNode->m_Next;
+		for (; CurNode != NULL; PrevNode = CurNode, CurNode = CurNode->m_Next)
+		{
+			if (CurNode->m_Handle == Handle)
+			{
+				PrevNode->m_Next = CurNode->m_Next;
+				delete CurNode;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template<size_t Size>
+	inline CWindowHandle * CWindowMap<Size>::getWindowThis(HWND Handle)
+	{
+		CWindowNode * Node = wm_FindWindowNode(Handle);
+		if (Node == NULL) return NULL;
+		return Node->m_This;
+	}
+
+	template<size_t Size>
+	CWindowNode * CWindowMap<Size>::wm_FindWindowNode(HWND Handle)
+	{
+		for (CWindowNode * Node = m_WindowMap[wm_Hash(Handle)]; Node != NULL; Node = Node->m_Next)
+		{
+			if (Node->m_Handle == Handle)
+				return Node;
+		}
+		return NULL;
+	}
+
+	template<size_t Size>
+	unsigned CWindowMap<Size>::wm_Hash(HWND Handle)
+	{
+		unsigned Hash = 0;
+		for (unsigned Cnt = 0; Cnt < sizeof(HWND) * 8; Cnt+= 2)
+			Hash += (unsigned)Handle ^ (0xAF << Cnt);
+		return Hash % Size;
+	}
+
+	CWindowMap<60> WindowMap;
+
+	//=========================================================
+
+
+	class CWindowHandle
 	{
 	private:
 		HWND m_Handle = NULL;
 
 	public:
-		CWindowHandle();
-		CWindowHandle(HWND Handle);
+		inline CWindowHandle();
+		inline CWindowHandle(const CWindowHandle * Wnd);
+		inline CWindowHandle(const CWindowHandle & Wnd);
+		inline CWindowHandle(HWND Handle);
 
-		inline operator HWND();
+		inline operator HWND() const;
 
-        inline void Attach(HWND NewWnd);
+		inline HWND getHandle() const;
+
+        inline void Attach(CWindowHandle NewWnd);
         inline HWND Detach();
 
-        LRESULT CallWindowProc(WNDPROC WndProc, UINT Message, WPARAM WParam, LPARAM LParam);
-        LRESULT DefWindowProc(UINT Message, WPARAM WParam, LPARAM LParam);
+        inline LRESULT CallWindowProc(WNDPROC WndProc, UINT Message, WPARAM WParam, LPARAM LParam);
+        inline LRESULT DefWindowProc(UINT Message, WPARAM WParam, LPARAM LParam);
 
-        inline static CWindowHandle* getWndThis(HWND Handle);
-        inline static void     setWndThis(HWND Handle, CWindowHandle* This);
+		inline LRESULT SendMessage(UINT Message, WPARAM WParam, LPARAM LParam);
+		inline LRESULT PostMessage(UINT Message, WPARAM WParam, LPARAM LParam);
 
-        inline LONG_PTR  getStyle   () const;
-        inline LONG_PTR  getExStyle () const;
-        inline WNDPROC   getProc    () const;
-        inline HINSTANCE getInstance() const;
-        inline HWND      getParent  () const;
-        inline LONG_PTR  getID      () const;
-		 
-        inline void setStyle   (LONG_PTR  Style);
-        inline void setExStyle (LONG_PTR  ExStyle);
-        inline void setProc    (WNDPROC   WndProc);
-        inline void setInstance(HINSTANCE HInstance);
-        inline void setParent  (HWND      newParent);
-        inline void setID      (LONG_PTR  ID);
+        inline static CWindowHandle * getWndThis(HWND Handle);
+        inline static void            setWndThis(HWND Handle, CWindowHandle * This);
+
+        inline CWndStyle     getStyle   () const;
+        inline CWndExStyle   getExStyle () const;
+        inline WNDPROC       getProc    () const;
+        inline HINSTANCE     getInstance() const;
+        inline CWindowHandle getParent  () const;
+        inline LONG_PTR      getID      () const;
+		
+        inline void setStyle   (const CWndStyle   & Style);
+        inline void setExStyle (const CWndExStyle & ExStyle);
+        inline void setProc    (WNDPROC       WndProc);
+        inline void setInstance(HINSTANCE     HInstance);
+        inline void setParent  (HWND          newParent);
+        inline void setID      (LONG_PTR      ID);
 
         inline bool setText(LPCTSTR Text) const;
-        inline int  getText(LPTSTR  Text, int Quantity) const;
+        inline int  getText(LPTSTR  Text, int Length) const;
         inline int  getTextLength() const;
 
-        inline bool Show     (int nCmdShow);
-        inline bool ShowAsync(int nCmdShow);
+        inline bool Show      (int CmdShow);
+        inline bool ShowAsync (int CmdShow);
 
-        inline bool Animate   (DWORD dwTime, DWORD dwFlags);
-        inline bool Flash     (bool bInvert);
+        inline bool Animate   (DWORD Time, DWORD dwFlags);
+        inline bool Flash     (bool Invert);
         inline bool FlashEx   (UINT Size, DWORD Flags, UINT Count, DWORD Timeout);
         inline bool OpenIcon  ();
         inline bool Update    ();
         inline bool LockUpdate();
         inline bool Enable    (bool bEnable);
         inline bool setFocus  ();
-        inline bool Redraw    (RECT *lprcUpdate, HRGN hrgnUpdate, UINT flags);
+        inline bool Redraw    (RECT * rctUpdate, HRGN rgnUpdate, UINT flags);
 
         inline bool Close();
 
-		inline bool isChild  (CWindowHandle * Parent) const;
-		inline bool isChild  (CWindowHandle & Parent) const;
+		inline bool isChild  (CWindowHandle Parent) const;
         inline bool isHungApp() const;
         inline bool isVisible() const;
         inline bool isIconic () const;
@@ -73,7 +179,7 @@ namespace Window
         inline bool getUpdateRect(LPRECT Rect, bool Erase) const;
         inline bool getClientRect(LPRECT Rect) const;
 
-        inline bool setPos(HWND WndInsertAfter, int Left, int Top, int Width, int Height, unsigned Flags);
+        inline bool setPos(CWindowHandle WndInsertAfter, int Left, int Top, int Width, int Height, unsigned Flags);
         inline bool Move(int X, int Y, int Width, int Height, bool Repaint);
 
         inline bool InvalidateRect(const RECT *Rect, bool Erase = false);
@@ -109,15 +215,12 @@ namespace Window
 		//bool EnumChildWindows(HWND hWndParent, WNDENUMPROC lpEnumFunc, LPARAM lParam);			
 	};
 
-	class WL_NOVTABLE CWindow : public CWindowHandle
+	class CWindow : public CWindowHandle
 	{
 	public:
 		CWindow() {WL_CTOR_TRACE;}
-		inline bool Create(DWORD ExStyle, LPCTSTR ClassName, LPCTSTR WindowName, DWORD Style,
-			int Left, int Top, int Width, int Height, CWindowHandle* Parent, HMENU Menu, HINSTANCE Instance, LPVOID LParam);
-
-		inline bool Create(DWORD ExStyle, LPCTSTR ClassName, LPCTSTR WindowName, DWORD Style,
-			int Left, int Top, int Width, int Height, CWindowHandle& Parent, HMENU Menu, HINSTANCE Instance, LPVOID LParam);
+		inline bool Create(CWndExStyle ExStyle, LPCTSTR ClassName, LPCTSTR WindowName, CWndStyle Style,
+			int Left, int Top, int Width, int Height, CWindowHandle Parent, HMENU Menu, HINSTANCE Instance, LPVOID LParam);
 
 		bool Destroy();
 	};
@@ -128,6 +231,17 @@ namespace Window
 	{
 		WL_CTOR_TRACE;
 		m_Handle = NULL;
+	}
+
+	inline CWindowHandle::CWindowHandle(const CWindowHandle * Wnd)
+	{
+		WL_ASSERT(Wnd != NULL);
+		Attach(Wnd->getHandle());
+	}
+
+	inline CWindowHandle::CWindowHandle(const CWindowHandle & Wnd) 
+	{
+		Attach(Wnd.getHandle());
 	}
 
 	inline CWindowHandle::CWindowHandle(HWND Handle)
@@ -141,16 +255,21 @@ namespace Window
 		return m_Handle == NULL;
 	}
 
-    inline CWindowHandle::operator HWND()
+    inline CWindowHandle::operator HWND() const
     {
         return m_Handle;
     }
 
-    inline void CWindowHandle::Attach(HWND NewWnd)
+	inline HWND CWindowHandle::getHandle() const
+	{
+		return m_Handle;
+	}
+
+    inline void CWindowHandle::Attach(CWindowHandle NewWnd)
     {
         WL_ASSERT(m_Handle == NULL);
-        WL_ASSERT(::IsWindow(NewWnd));
-        m_Handle = NewWnd;
+        WL_ASSERT(NewWnd.isWindow());
+        m_Handle = NewWnd.getHandle();
     }
 
     inline HWND CWindowHandle::Detach()
@@ -171,6 +290,16 @@ namespace Window
         return ::DefWindowProc(m_Handle, Message, WParam, LParam);
     }
 
+	inline LRESULT CWindowHandle::SendMessage(UINT Message, WPARAM WParam, LPARAM LParam)
+	{
+		return ::SendMessage(m_Handle, Message, WParam, LParam);
+	}
+
+	inline LRESULT CWindowHandle::PostMessage(UINT Message, WPARAM WParam, LPARAM LParam)
+	{
+		return ::PostMessage(m_Handle, Message, WParam, LParam);
+	}
+
     //=========================================================================================================================================
 
     inline CWindowHandle* CWindowHandle::getWndThis(HWND Handle)
@@ -182,21 +311,26 @@ namespace Window
     inline void CWindowHandle::setWndThis(HWND Handle, CWindowHandle* This)
     {
         WL_ASSERT(::IsWindow(Handle));
-        ::SetLastError(0);
-        ::SetWindowLong(Handle, GWLP_USERDATA, (LONG_PTR)This);
+        //::SetLastError(0);
+        //::SetWindowLong(Handle, GWLP_USERDATA, (LONG_PTR)This);
+		WindowMap.AddWindow(Handle, This);
     }
     //=========================================================================================================================================
 
-    inline LONG_PTR CWindowHandle::getStyle() const
+    inline CWndStyle CWindowHandle::getStyle() const
     {
         WL_ASSERT(isWindow());
-        return ::GetWindowLongPtr(m_Handle, GWL_STYLE);
+		CWndStyle Style(wsNone);
+		Style.SetValue(::GetWindowLongPtr(m_Handle, GWL_STYLE));
+		return Style;
     }
 
-    inline LONG_PTR CWindowHandle::getExStyle() const
+    inline CWndExStyle CWindowHandle::getExStyle() const
     {
         WL_ASSERT(isWindow());
-        return ::GetWindowLongPtr(m_Handle, GWL_EXSTYLE);
+		CWndExStyle Style(wesNone);
+		Style.SetValue(::GetWindowLongPtr(m_Handle, GWL_EXSTYLE));
+        return Style;
     }
 
     inline WNDPROC CWindowHandle::getProc() const
@@ -211,10 +345,10 @@ namespace Window
         return (HINSTANCE)::GetWindowLongPtr(m_Handle, GWLP_HINSTANCE);
     }
 
-    inline HWND CWindowHandle::getParent() const
+    inline CWindowHandle CWindowHandle::getParent() const
     {
         WL_ASSERT(isWindow());
-        return (HWND)::GetWindowLongPtr(m_Handle, GWLP_HWNDPARENT);
+        return CWindowHandle((HWND)::GetWindowLongPtr(m_Handle, GWLP_HWNDPARENT));
     }
 
     inline LONG_PTR CWindowHandle::getID() const
@@ -224,14 +358,14 @@ namespace Window
     }
     //=========================================================================================================================================
 
-    inline void CWindowHandle::setStyle(LONG_PTR Style)
+    inline void CWindowHandle::setStyle(const CWndStyle & Style)
     {
         WL_ASSERT(isWindow());
         ::SetLastError(0);
         ::SetWindowLongPtr(m_Handle, GWL_STYLE, Style);
     }
 
-    inline void CWindowHandle::setExStyle(LONG_PTR ExStyle)
+    inline void CWindowHandle::setExStyle(const CWndExStyle & ExStyle)
     {
         WL_ASSERT(isWindow());
         ::SetLastError(0);
@@ -371,20 +505,13 @@ namespace Window
         return true && ::IsHungAppWindow(m_Handle);
     }
 
-    inline bool CWindowHandle::isChild(CWindowHandle * Parent) const
+    inline bool CWindowHandle::isChild(CWindowHandle Parent) const
     {
 		WL_ASSERT(Parent != NULL);
-		WL_ASSERT(Parent->isWindow());
-		WL_ASSERT(isWindow());
-        return true && ::IsChild(*Parent, m_Handle);
-    }
-
-	inline bool CWindowHandle::isChild(CWindowHandle & Parent) const
-	{
 		WL_ASSERT(Parent.isWindow());
 		WL_ASSERT(isWindow());
-		return true && ::IsChild(Parent, m_Handle);
-	}
+        return true && ::IsChild(Parent, m_Handle);
+    }
 
     inline bool CWindowHandle::isVisible() const
     {
@@ -442,11 +569,12 @@ namespace Window
     }
     //=========================================================================================================================================
 
-    inline bool CWindowHandle::setPos(HWND hWndInsertAfter, int Left, int Top, int Width, int Height, unsigned Flags)
+    inline bool CWindowHandle::setPos(CWindowHandle hWndInsertAfter, int Left, int Top, int Width, int Height, unsigned Flags)
     {
         WL_ASSERT(isWindow());
         return true && ::SetWindowPos(m_Handle, hWndInsertAfter, Left, Top, Width, Height, Flags);
     }
+
     inline bool CWindowHandle::Move(int Left, int Top, int Width, int Height, bool Repaint)
     {
         WL_ASSERT(isWindow());
@@ -465,42 +593,30 @@ namespace Window
 
 	//=============================================================================================
 
-	inline bool CWindow::Create(DWORD ExStyle,
+	inline bool CWindow::Create(CWndExStyle ExStyle,
 		LPCTSTR ClassName,
 		LPCTSTR WindowName,
-		DWORD Style,
+		CWndStyle Style,
 		int Left, int Top, int Width, int Height,
-		CWindowHandle * Parent,
+		CWindowHandle Parent,
 		HMENU Menu,
 		HINSTANCE Instance,
 		LPVOID LParam)
 	{
-		WL_ASSERT(Parent != NULL);
-		WL_ASSERT(Parent->isWindow() == true);
-		WL_ASSERT(isNull() == true);
-		HWND NewHandle = ::CreateWindowEx(ExStyle, ClassName, WindowName, Style, Left, Top, Width, Height, *Parent, Menu, Instance, LParam);
-		Detach();
-		if (NewHandle != NULL)
-			Attach(NewHandle);
-		return NewHandle != NULL;
-	}
-
-	inline bool CWindow::Create(DWORD ExStyle,
-		LPCTSTR ClassName,
-		LPCTSTR WindowName,
-		DWORD Style,
-		int Left, int Top, int Width, int Height,
-		CWindowHandle & Parent,
-		HMENU Menu,
-		HINSTANCE Instance,
-		LPVOID LParam)
-	{
-		WL_ASSERT(isNull() == true);
 		WL_ASSERT(Parent.isWindow() == true);
-		HWND NewHandle = ::CreateWindowEx(ExStyle, ClassName, WindowName, Style, Left, Top, Width, Height, Parent, Menu, Instance, LParam);
+		WL_ASSERT(isNull() == true);
+		HWND NewHandle = ::CreateWindowEx(
+			ExStyle, 
+			ClassName, WindowName, 
+			Style, 
+			Left, Top, Width, Height, 
+			Parent, Menu, Instance, LParam);
 		Detach();
 		if (NewHandle != NULL)
+		{
 			Attach(NewHandle);
+			WindowMap.AddWindow(NewHandle, this);
+		}
 		return NewHandle != NULL;
 	}
 
@@ -513,6 +629,7 @@ namespace Window
 			Attach(DestWnd);
 			return false;
 		}
+		WindowMap.DeleteWindow(DestWnd);
 		return true;
 	}
 }

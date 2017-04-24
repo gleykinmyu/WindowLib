@@ -5,11 +5,12 @@
 
 namespace Window
 {
+	WndInfo::WNDINFOEX::WNDINFOEX() : wiStyle(wsNone), wiExStyle(wesNone)
+	{
+	}
+
     WndInfo::WndInfo()
     {
-        WindowStruct.wiStyle    = 0;
-        WindowStruct.wiExStyle  = 0;
-
         WindowStruct.wiWindowName = TEXT("Default Window Name");
 
         WindowStruct.wiTop      = 20;
@@ -43,25 +44,7 @@ namespace Window
     inline WndInfo& WndInfo::Menu      (HMENU     _Menu           ) { WindowStruct.wiMenu       = _Menu;       return *this; }
     inline WndInfo& WndInfo::Instance  (HINSTANCE _Instance       ) { WindowStruct.wiInstance   = _Instance;   return *this; }
 
-    bool CWindowImpl::Create(CWindowHandle * Parent, LPCTSTR ClassName, WndInfo & WndInfo, LPVOID lpParam)
-    {
-		WL_ASSERT(Parent != NULL);
-		return CWindow::Create(
-        WndInfo.WindowStruct.wiExStyle,
-		ClassName,
-        WndInfo.WindowStruct.wiWindowName,
-        WndInfo.WindowStruct.wiStyle,
-        WndInfo.WindowStruct.wiLeft,
-        WndInfo.WindowStruct.wiTop,
-        WndInfo.WindowStruct.wiWidth,
-        WndInfo.WindowStruct.wiHeight,
-        Parent,
-        WndInfo.WindowStruct.wiMenu,
-        WndInfo.WindowStruct.wiInstance,
-		lpParam);
-    }
-
-	bool CWindowImpl::Create(CWindowHandle & Parent, LPCTSTR ClassName, WndInfo & WndInfo, LPVOID lpParam)
+	bool CWindowImpl::Create(CWindowHandle Parent, LPCTSTR ClassName, WndInfo & WndInfo, LPVOID lpParam)
 	{
 		return 	CWindow::Create(
 		WndInfo.WindowStruct.wiExStyle,

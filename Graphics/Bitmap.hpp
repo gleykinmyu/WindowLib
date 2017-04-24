@@ -1,15 +1,16 @@
 #ifndef WL_BITMAP_HPP
 #define WL_BITMAP_HPP
 
-#include <WinLib/Graphics/Detail/BitmapRoot.hpp>
+#include <WinLib/Graphics/ObjectHandleWraps.hpp>
 #include <WinLib/Utility.hpp>
 
 namespace Graphics 
 {
-    class CBitmap : public GraphicsDetail::CBitmapRoot
+    class CBitmap : public CBitmapHandle
     {
     public:
         CBitmap();
+		~CBitmap();
 
         bool LoadFromFile(LPCTSTR FileName, int Width = 0, int Height = 0);
 

@@ -4,27 +4,12 @@
 
 namespace Window
 {
-    inline CWindowEvent* CWindowEvent::getWndThis(LPARAM LParam)
-    {
-        return (CWindowEvent*)LPCREATESTRUCT(LParam)->lpCreateParams;
-    }
-
-    inline CWindowEvent* CWindowEvent::getWndThis(HWND Handle)
-    {
-        return (CWindowEvent*)CWindow::getWndThis(Handle);
-    }
-
-	void CWindowEvent::DefaultMessageProcessor(System::CEvent * Event)
-    {
-        Event->Result = m_DefWindowProc(*this, Event->Message, Event->WParam, Event->LParam);
-    };
-
     LRESULT CALLBACK CWindowEvent::StartWindowProcedure(HWND Handle, UINT Message, WPARAM WParam, LPARAM LParam)
     {
         if (Message == WM_NCCREATE)
         {
             CWindowEvent* Window = getWndThis(LParam);
-            CWindow::setWndThis(Handle, Window);
+			setWndThis(Handle, Window);
             Window->Attach(Handle);
             Window->setProc(WindowProcedure);
             return WindowProcedure(Handle, Message, WParam, LParam);
@@ -34,19 +19,42 @@ namespace Window
 
     LRESULT CALLBACK CWindowEvent::WindowProcedure(HWND Handle, UINT Message, WPARAM WParam, LPARAM LParam)
     {
-        CWindowEvent* Window = getWndThis(Handle);
-        System::CEvent Event(Message, WParam, LParam);
+        CWindowEvent * Window = getWndThis(Handle);
+        System::CMessage wl_Message(Message, WParam, LParam);
+		
+		bool Handled = false;
 
         if (Window != NULL)
         {
-            Window->MessagePreProcessor (&Event);
-            Window->MessageProcessor    (&Event);
-            Window->MessagePostProcessor(&Event);
+			switch (Message)
+			{
+			case WM_NCCREATE:
+			case WM_SIZE:
+			case WM_MOVE:
+			case WM_THEMECHANGED:
+			case WM_STYLECHANGED:
+			case WM_DPICHANGED:
+			case WM_WINDOWPOSCHANGED:
+				Window->WindowParamsChangingProcessor(&wl_Message);
+				Handled = true;
+				break;
+			default: break;
+			}
+
+                       Window->MessagePreProcessor (&wl_Message);
+			Handled |= Window->MessageProcessor    (&wl_Message);        
+			           Window->MessagePostProcessor(&wl_Message);
+			
 			if (Message == WM_NCDESTROY)
+			{
 				Window->Detach();
-            return Event.Result;
+				clearWndThis(Handle);
+			}
+
+			if (Handled == false) Window->DefaultMessageProcessor(&wl_Message);
+			return wl_Message.Result;
         }
-        return ::DefWindowProc(Handle, Message, WParam, LParam);
+		return ::DefWindowProc(Handle, Message, WParam, LParam);
     }
 }
 

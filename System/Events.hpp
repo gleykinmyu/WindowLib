@@ -4,15 +4,21 @@
 
 namespace System
 {
-    class CEvent
+    class CMessage
     {
     public:
         WPARAM  WParam;
         LPARAM  LParam;
         UINT    Message;
         LRESULT Result;
-        CEvent(UINT _Message, WPARAM _WParam, LPARAM _LParam);
+        inline CMessage(UINT _Message, WPARAM _WParam, LPARAM _LParam);
     };
+
+	inline CMessage::CMessage(UINT _Message, WPARAM _WParam, LPARAM _LParam) :
+		Message(_Message), WParam(_WParam), LParam(_LParam), Result(0)
+	{
+
+	}
 }
 
 #endif //!WL_EVENTS_H

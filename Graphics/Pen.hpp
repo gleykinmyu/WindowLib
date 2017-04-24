@@ -2,46 +2,30 @@
 #define WL_PEN_H
 
 #include <Windows.h>
-#include <WinLib/Graphics/DeviceContext.hpp>
+#include <WinLib/Graphics/ObjectHandleWraps.hpp>
 #include <WinLib/Graphics/Color.hpp>
 #include <WinLib/Graphics/Detail/PenRoot.hpp>
 
 namespace Graphics
 {
-    enum EPenStyle
-    {
-        psSolid     = PS_SOLID,      /*__________*/
-        psDash      = PS_DASH,       /* -------  */
-        psDot       = PS_DOT,        /* .......  */
-        psDashDot   = PS_DASHDOT,    /* _._._._  */
-        psDasDotDot = PS_DASHDOTDOT, /* _.._.._  */
-        psNull      = PS_NULL
-    };
-
-    class CPen : public GraphicsDetail::CPenRoot
+    class CPenDC : private GraphicsDetail::CPenS
     {
     public:
-        CPen();
+		CPenDC(CDeviceContext & DC);
+		Utility::CProperty<Utility::RW, CColor,    CPenDC> Color;
+        Utility::CProperty<Utility::RW, EPenStyle, CPenDC> Style;
+        Utility::CProperty<Utility::RW, int,       CPenDC> Width;
+	};
 
-        Utility::CProperty<Utility::RW, CColor,    CPen> Color;
-        Utility::CProperty<Utility::RW, EPenStyle, CPen> Style;
-        Utility::CProperty<Utility::RW, int,       CPen> Width;
+	class CPen : public GraphicsDetail::CPenG
+	{
+	public:
+		CPen();
 
-    private:
-        //====================================Getters==============================================
-        CColor    getColor() const;
-        EPenStyle getStyle() const;
-        int       getWidth() const;
-
-        //=========================================Setters=========================================
-        void setColor(CColor Color);
-        void setStyle(EPenStyle Style);
-        void setWidth(int Width);
-
-        //========================================Service==========================================
-        EPenStyle ConvertToStyle(UINT Style) const;
-        void m_Replace(LOGPEN * LogPen);
-    };
+		Utility::CProperty<Utility::RO, CColor,    CPenG> Color;
+		Utility::CProperty<Utility::RO, EPenStyle, CPenG> Style;
+		Utility::CProperty<Utility::RO, int,       CPenG> Width;
+	};
 }
 
 

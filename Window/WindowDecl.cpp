@@ -69,6 +69,23 @@ namespace Window
         return WndStruct.lpszClassName;
     }
 
+	LPCTSTR CWindowDecl::wl_RegisterWindowSuperClass(LPCTSTR ClassName, LPCTSTR OriginClassName)
+	{
+		WNDCLASSEX WndStruct;
+		if (GetClassInfoEx(0, OriginClassName, &WndStruct) == 0) return NULL;
+
+		WndStruct.cbSize = sizeof(WNDCLASSEX);
+		setSuperProcedure(WndStruct.lpfnWndProc);
+		WndStruct.lpfnWndProc = CWindowEvent::StartWindowProcedure;
+		WndStruct.hInstance = System::Module->Instance;
+		WndStruct.lpszClassName = ClassName ?
+			ClassName : wl_FormatClassName();
+
+		if (RegisterClassEx(&WndStruct) == 0) return NULL;
+
+		return ClassName;
+	}
+
     bool CWindowDecl::wl_ClassExist(HINSTANCE Instance, LPCTSTR ClassName)
     {
         WNDCLASSEX WndStruct;

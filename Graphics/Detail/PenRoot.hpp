@@ -1,83 +1,121 @@
 #ifndef WL_PEN_ROOT_HPP
 #define WL_PEN_ROOT_HPP
 
-#include <Windows.h> 
+#include <WinLib/Utility.hpp>
+#include <WinLib/Graphics/ObjectHandleWraps.hpp>
+#include <WinLib/Graphics/Color.hpp>
 
 namespace GraphicsDetail
 {
-    class CPenRoot
-    {
-    private:
-        HPEN m_Pen = NULL;
+	class CPenObject : public Graphics::CPenHandle
+	{
+	public:
+		~CPenObject();
+	};
 
-    public:
-        ~CPenRoot();
+	CPenObject::~CPenObject()
+	{
+		WL_ASSERT(isNull() == true);
+	}
 
-        inline HPEN getHandle() const;
+	class CPenG : public CPenObject
+	{
+	public:
+		Graphics::CColor    getColor() const;
+		Graphics::EPenStyle getStyle() const;
+		int                 getWidth() const;
+		Graphics::EPenStyle wl_ConvertToStyle(UINT Style) const;
+	};
 
-        inline void Attach(HPEN NewPen);
-        inline HPEN Detach();
+	Graphics::CColor CPenG::getColor() const
+	{
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		return Graphics::CColor(logPen.lopnColor);
+	}
 
-        inline bool Create(int Style, int Width, COLORREF Color);
+	Graphics::EPenStyle CPenG::getStyle() const
+	{
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		return wl_ConvertToStyle(logPen.lopnStyle);
+	}
 
-        inline bool CreateIndirect(LOGPEN* LogPen);
-        inline bool Delete();
+	int CPenG::getWidth() const
+	{
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		return logPen.lopnWidth.x;
+	}
 
-        inline int getInfo(LOGPEN* LogPen) const;
-    };
+	Graphics::EPenStyle CPenG::wl_ConvertToStyle(UINT Style) const
+	{
+		switch (Style)
+		{
+		case PS_SOLID:      return Graphics::psSolid;
+		case PS_DASH:       return Graphics::psDash;
+		case PS_DOT:        return Graphics::psDot;
+		case PS_DASHDOT:    return Graphics::psDashDot;
+		case PS_DASHDOTDOT: return Graphics::psDasDotDot;
+		case PS_NULL:       return Graphics::psNull;
+		default: WL_TRACE("There is no suitable conversion from PENSTYLE to EPenStyle!!!");
+		}
+		return Graphics::psNull;
+	}
 
-    inline CPenRoot::~CPenRoot()
-    {
-        WL_ASSERT(m_Pen == NULL);
-    }
+	class CPenS : public CPenG
+	{
+	public:
+		CPenS(Graphics::CDeviceContext & DC);
+		void setColor(const Graphics::CColor & Color);
+		void setStyle(const Graphics::EPenStyle & Style);
+		void setWidth(int Width);
+		Graphics::CDeviceContext & m_OwnDC;
+	private:
+		void wl_Replace(LOGPEN * LogPen);
+	};
 
-    inline HPEN CPenRoot::getHandle() const
-    {
-        return m_Pen;
-    }
+	inline CPenS::CPenS(Graphics::CDeviceContext & DC) : m_OwnDC(DC)
+	{
+	}
 
-    inline void CPenRoot::Attach(HPEN NewPen)
-    {
-        WL_ASSERT(m_Pen == NULL);
-        WL_ASSERT(NewPen != NULL);
-        m_Pen = NewPen;
-    }
+	void CPenS::setColor(const Graphics::CColor & Color)
+	{
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		logPen.lopnColor = Color;
+		wl_Replace(&logPen);
+	}
 
-    inline HPEN CPenRoot::Detach()
-    {
-        HPEN RetPen = m_Pen;
-        m_Pen = NULL;
-        return RetPen;
-    }
+	void CPenS::setStyle(const Graphics::EPenStyle & Style)
+	{
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		logPen.lopnStyle = Style;
+		wl_Replace(&logPen);
+	}
 
-    inline bool CPenRoot::Create(int Style, int Width, COLORREF Color)
-    {
-        WL_ASSERT(Width >= 0);
-        m_Pen = ::CreatePen(Style, Width, Color);
-        return m_Pen != NULL;
-    }
+	void CPenS::setWidth(int Width)
+	{
+		WL_ASSERT(Width >= 0);
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		logPen.lopnWidth.x = Width;
+		logPen.lopnWidth.y = 0;
+		wl_Replace(&logPen);
+	}
 
-    inline bool CPenRoot::CreateIndirect(LOGPEN * LogPen)
-    {
-        WL_ASSERT(LogPen != NULL);
-        m_Pen = ::CreatePenIndirect(LogPen);
-        return m_Pen != NULL;
-    }
+	void CPenS::wl_Replace(LOGPEN * LogPen)
+	{
+		CPenHandle NewPen;
+		if (NewPen.CreateIndirect(LogPen) == true)
+		{
+			Delete();
+			Attach(NewPen.Detach());
+			m_OwnDC.selectPen(getHandle());
+		}
+	}
 
-    inline bool CPenRoot::Delete()
-    {
-        WL_ASSERT(m_Pen != NULL);
-        bool Result = true && ::DeleteObject(m_Pen);
-        if (Result) m_Pen = NULL;
-        return Result;
-    }
-
-    inline int CPenRoot::getInfo(LOGPEN * LogPen) const
-    {
-        WL_ASSERT(m_Pen != NULL);
-        WL_ASSERT(LogPen != NULL);
-        return ::GetObject(m_Pen, sizeof(LOGPEN), LogPen);
-    }
 }
 
-#endif // !WL_PEN_ROOT_HPP
+#endif //!WL_PEN_ROOT_HPP

@@ -3,7 +3,8 @@
 
 #include <Windows.h>
 #include <WinLib/Utility.hpp>
-#include <WinLib/Graphics/DeviceContext.hpp>
+#include <WinLib/Graphics/ObjectHandleWraps.hpp>
+#include <WinLib/Window.hpp>
 
 namespace Graphics
 {
@@ -13,11 +14,11 @@ namespace Graphics
         HWND m_Owner = NULL;
 
     public:
-        CClientDCroot(HWND Owner)
+        CClientDCroot(const Window::CWindowHandle Owner)
         {
             WL_ASSERT(isNull() == true);
-            WL_ASSERT(Owner);
-            HDC DC = ::GetDC(Owner);
+            WL_ASSERT(Owner.isWindow() == true);
+            HDC DC = ::GetDC(Owner.getHandle());
             if (DC != NULL)
                 Attach(DC);
         }
@@ -35,10 +36,10 @@ namespace Graphics
         HWND m_Owner = NULL;
 
     public:
-        CWindowDCroot(HWND Owner)
+        CWindowDCroot(const Window::CWindowHandle Owner)
         {
             WL_ASSERT(isNull() == true);
-            WL_ASSERT(Owner);
+            WL_ASSERT(Owner.isWindow() == true);
             HDC DC = ::GetWindowDC(Owner);
             if (DC != NULL)
                 Attach(DC);
@@ -59,10 +60,10 @@ namespace Graphics
     public:
         PAINTSTRUCT PtStruct = {};
 
-        CPaintDCroot(HWND Owner)
+        CPaintDCroot(const Window::CWindowHandle Owner)
         {
             WL_ASSERT(isNull() == true);
-            WL_ASSERT(Owner);
+            WL_ASSERT(Owner.isWindow() == true);
             HDC DC = ::BeginPaint(Owner, &PtStruct);
             if (DC != NULL)
                 Attach(DC);

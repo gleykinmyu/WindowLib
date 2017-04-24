@@ -6,6 +6,6 @@
 #include <WinLib/Window/WindowDecl.hpp>
 #include <WinLib/Window/WindowImpl.hpp>
 #include <WinLib/Window/WindowRoot.hpp>
-#include <WinLib/Window/WindowProperty.hpp>
+//#include <WinLib/Window/WindowProperty.hpp>
 
 #endif //!WL_WINDOW_HPP
