@@ -5,7 +5,7 @@
 
 namespace Window
 {
-	WndInfo::WNDINFOEX::WNDINFOEX() : wiStyle(wsNone), wiExStyle(wesNone)
+	WndInfo::WNDINFOEX::WNDINFOEX()
 	{
 	}
 
@@ -19,7 +19,7 @@ namespace Window
         WindowStruct.wiHeight   = 50;
 
         WindowStruct.wiMenu     = 0;
-        WindowStruct.wiInstance = System::Module->Instance;
+        WindowStruct.wiInstance = wl::Module->Instance;
     }
 
     //============================================================================================================

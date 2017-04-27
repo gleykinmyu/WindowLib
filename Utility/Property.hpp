@@ -22,12 +22,17 @@ namespace Utility
             m_Setter = Setter;
         }
 
-        inline void operator = (const DataType & Data) const
+        inline void operator = (const DataType & Data)
         {
             (m_Owner->*m_Setter)(Data);
         }
 
-        inline operator DataType ()
+		inline void set(const DataType & Data)
+		{
+			(m_Owner->*m_Setter)(Data);
+		}
+
+        inline operator DataType () const
         {
             return (m_Owner->*m_Getter)();
         }
@@ -52,7 +57,7 @@ namespace Utility
             m_Getter = Getter;
         }
 
-        inline operator DataType()
+        inline operator DataType() const
         {
             return (m_Owner->*m_Getter)();
         }
@@ -179,39 +184,40 @@ namespace Utility
 		typedef void (ParentType::*SETTER)(int);
 
 	public:
-		void Init(ParentType * Parent, GETTER Getter, SETTER Setter)
+		void Init(ParentType * Parent, GETTER Getter, SETTER Setter, SETTER MixSetter)
 		{
-			m_Owner = Parent;
-			m_Getter = Getter;
-			m_Setter = Setter;
+			m_Owner     = Parent;
+			m_Getter    = Getter;
+			m_Setter    = Setter;
+			m_MixSetter = MixSetter;
 		}
 
-		void inline operator = (int Data) const
+		void inline operator = (int Data)
 		{
 			(m_Owner->*m_Setter)(Data);
 		}
 
-		void inline operator += (int Data) const
+		void inline operator += (int Data)
 		{
-			(m_Owner->*m_Setter)(Data + (m_Owner->*m_Getter)());
+			(m_Owner->*m_MixSetter)(Data);
 		}
 
-		void inline operator -= (int Data) const
+		void inline operator -= (int Data)
 		{
-			(m_Owner->*m_Setter)(Data - (m_Owner->*m_Getter)());
+			(m_Owner->*m_MixSetter)(-1*Data);
 		}
 
-		void inline operator ++ () const
+		void inline operator ++ ()
 		{
-			(m_Owner->*m_Setter)((m_Owner->*m_Getter)() + 1);
+			(m_Owner->*m_MixSetter)(1);
 		}
 
-		void inline operator -- () const
+		void inline operator -- ()
 		{
-			(m_Owner->*m_Setter)((m_Owner->*m_Getter)() - 1);
+			(m_Owner->*m_MixSetter)(-1);
 		}
 
-		inline operator int()
+		inline operator int() const
 		{
 			return (m_Owner->*m_Getter)();
 		}
@@ -220,6 +226,7 @@ namespace Utility
 		ParentType* m_Owner;
 		GETTER      m_Getter;
 		SETTER      m_Setter;
+		SETTER      m_MixSetter;
 	};
 }
 #endif //CPROPERTY_HPP

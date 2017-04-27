@@ -4,14 +4,7 @@
 
 namespace System
 {
-	class CModule
-	{
-	public:
-		HINSTANCE Instance = GetModuleHandle(0);
-	};
 
-	const CModule m_Module;
-	const CModule* Module = &m_Module;
 }
 
 #endif //!WL_MODULE_HPP

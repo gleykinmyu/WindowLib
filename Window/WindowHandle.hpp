@@ -3,108 +3,10 @@
 #include <Windows.h>
 #include <WinLib/Utility.hpp>
 #include <WinLib/Window/WindowEnums.hpp>
+#include <WinLib/WinLib.hpp>
 
 namespace Window
 {
-	class CWindowHandle;
-
-	struct CWindowNode
-	{
-		HWND            m_Handle = NULL;
-		CWindowHandle * m_This   = NULL;
-		CWindowNode   * m_Next   = NULL;
-	};
-
-	template<size_t Size>
-	class CWindowMap
-	{
-	public:
-		bool AddWindow   (HWND Handle, CWindowHandle * This);
-		bool DeleteWindow(HWND Handle);
-		CWindowHandle * getWindowThis(HWND Handle);
-
-	private:
-		CWindowNode * wm_FindWindowNode(HWND Handle);
-		unsigned      wm_Hash          (HWND Handle);
-
-		CWindowNode *  m_WindowMap[Size];
-	};
-
-	template<size_t Size>
-	bool CWindowMap<Size>::AddWindow(HWND Handle, CWindowHandle * This)
-	{
-		if (wm_FindWindowNode(Handle) == NULL)
-		{
-			CWindowNode * Node = new CWindowNode;
-			Node->m_Next = m_WindowMap[wm_Hash(Handle)];
-			m_WindowMap[wm_Hash(Handle)] = Node;
-
-			Node->m_Handle = Handle;
-			Node->m_This   = This;
-			return true;
-		}
-		return false;
-	}
-
-	template<size_t Size>
-	bool CWindowMap<Size>::DeleteWindow(HWND Handle)
-	{
-		CWindowNode * Node = m_WindowMap[wm_Hash(Handle)];
-		if (Node == NULL) return true;
-		if (Node->m_Handle == Handle)
-		{
-			m_WindowMap[wm_Hash(Handle)] = Node->m_Next;
-			delete Node;
-			return true;
-		}
-			
-		CWindowNode * PrevNode = m_WindowMap[wm_Hash(Handle)];
-		CWindowNode * CurNode  = PrevNode->m_Next;
-		for (; CurNode != NULL; PrevNode = CurNode, CurNode = CurNode->m_Next)
-		{
-			if (CurNode->m_Handle == Handle)
-			{
-				PrevNode->m_Next = CurNode->m_Next;
-				delete CurNode;
-				return true;
-			}
-		}
-		return false;
-	}
-
-	template<size_t Size>
-	inline CWindowHandle * CWindowMap<Size>::getWindowThis(HWND Handle)
-	{
-		CWindowNode * Node = wm_FindWindowNode(Handle);
-		if (Node == NULL) return NULL;
-		return Node->m_This;
-	}
-
-	template<size_t Size>
-	CWindowNode * CWindowMap<Size>::wm_FindWindowNode(HWND Handle)
-	{
-		for (CWindowNode * Node = m_WindowMap[wm_Hash(Handle)]; Node != NULL; Node = Node->m_Next)
-		{
-			if (Node->m_Handle == Handle)
-				return Node;
-		}
-		return NULL;
-	}
-
-	template<size_t Size>
-	unsigned CWindowMap<Size>::wm_Hash(HWND Handle)
-	{
-		unsigned Hash = 0;
-		for (unsigned Cnt = 0; Cnt < sizeof(HWND) * 8; Cnt+= 2)
-			Hash += (unsigned)Handle ^ (0xAF << Cnt);
-		return Hash % Size;
-	}
-
-	CWindowMap<60> WindowMap;
-
-	//=========================================================
-
-
 	class CWindowHandle
 	{
 	private:
@@ -313,24 +215,20 @@ namespace Window
         WL_ASSERT(::IsWindow(Handle));
         //::SetLastError(0);
         //::SetWindowLong(Handle, GWLP_USERDATA, (LONG_PTR)This);
-		WindowMap.AddWindow(Handle, This);
+		wl::Module->WindowTable.AddWindow(Handle, This);
     }
     //=========================================================================================================================================
 
     inline CWndStyle CWindowHandle::getStyle() const
     {
         WL_ASSERT(isWindow());
-		CWndStyle Style(wsNone);
-		Style.SetValue(::GetWindowLongPtr(m_Handle, GWL_STYLE));
-		return Style;
+		return CWndStyle().setValue(::GetWindowLongPtr(m_Handle, GWL_STYLE));
     }
 
     inline CWndExStyle CWindowHandle::getExStyle() const
     {
         WL_ASSERT(isWindow());
-		CWndExStyle Style(wesNone);
-		Style.SetValue(::GetWindowLongPtr(m_Handle, GWL_EXSTYLE));
-        return Style;
+        return CWndExStyle().setValue(::GetWindowLongPtr(m_Handle, GWL_EXSTYLE));
     }
 
     inline WNDPROC CWindowHandle::getProc() const
@@ -362,7 +260,7 @@ namespace Window
     {
         WL_ASSERT(isWindow());
         ::SetLastError(0);
-        ::SetWindowLongPtr(m_Handle, GWL_STYLE, Style);
+        ::SetWindowLongPtr(m_Handle, GWL_STYLE, (WNDSTYLE)Style);
     }
 
     inline void CWindowHandle::setExStyle(const CWndExStyle & ExStyle)
@@ -611,12 +509,14 @@ namespace Window
 			Style, 
 			Left, Top, Width, Height, 
 			Parent, Menu, Instance, LParam);
-		Detach();
-		if (NewHandle != NULL)
+		if (NewHandle != NULL && getHandle() == NULL)
 		{
 			Attach(NewHandle);
-			WindowMap.AddWindow(NewHandle, this);
+			wl::Module->WindowTable.AddWindow(NewHandle, this);
 		}
+#ifndef WL_RELEASE
+		else WL_ASSERT(NewHandle == getHandle());
+#endif
 		return NewHandle != NULL;
 	}
 
@@ -629,7 +529,7 @@ namespace Window
 			Attach(DestWnd);
 			return false;
 		}
-		WindowMap.DeleteWindow(DestWnd);
+		wl::Module->WindowTable.DeleteWindow(DestWnd);
 		return true;
 	}
 }

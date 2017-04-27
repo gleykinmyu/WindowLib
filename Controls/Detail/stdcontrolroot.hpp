@@ -1,28 +1,28 @@
 #ifndef WL_STD_CONTROL_ROOT
 #define WL_STD_CONTROL_ROOT
 
+#include <Windows.h>
 #include <WinLib/Window.hpp>
-#include <WinLib/Utility.hpp>
 
 namespace ControlsDetail
 {
-    class CtrlInfo : public Window::WndInfo
+    class CStdControlRoot : public Window::CWindowRoot
     {
+	public:
+		inline bool Create(Window::CWindowHandle Parent, Window::WndInfo & Info);
 
+ 	private:
+		virtual bool MessageProcessor(System::CMessage * Message) override
+		{
+			DefaultMessageProcessor(Message);
+			return true;
+		}
     };
 
-    class CStdControlRoot : public Window::CWindowProperty<Window::CWindowImpl>
-    {
-    public:
-        CStdControlRoot(LPCTSTR WinControlName);
-        inline bool Create(Window::CWindowHandle * Parent, Window::WndInfo & Info);
-		inline bool Create(Window::CWindowHandle & Parent, Window::WndInfo & Info);
-
-    private:
-		LPCTSTR m_ClassName = NULL;
-		static LRESULT CALLBACK ControlProcedure(HWND Handle, UINT Message, WPARAM WParam, LPARAM LParam);
-        WNDPROC m_OwnControlProcedure;
-    };
-}
+	inline bool CStdControlRoot::Create(Window::CWindowHandle Parent, Window::WndInfo & Info)
+	{
+		return CWindowRoot::Create(Parent, Info.Style(Window::ws::Child));
+	}
+};
 
 #endif //!WL_STD_CONTROL_ROOT

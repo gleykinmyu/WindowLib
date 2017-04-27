@@ -1,0 +1,6 @@
+#ifndef WL_STD_CHECK_BOX_HPP
+#define WL_STD_CHECK_BOX_HPP
+
+
+
+#endif //!WL_STD_CHECK_BOX_HPP

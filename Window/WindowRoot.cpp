@@ -5,15 +5,15 @@
 
 namespace Window
 {
-	CWindowRoot::CWindowRoot() : m_Style(wsNone), m_ExStyle(wesNone)
+	CWindowRoot::CWindowRoot()
 	{
-		Style.  Init(this, &CWindowRoot::getStyle,   &CWindowRoot::setStyle);
-		ExStyle.Init(this, &CWindowRoot::getExStyle, &CWindowRoot::setExStyle);
+		Style.  Init(this, &CWindowRoot::getStyle,   &CWindowRoot::setStyle,   &CWindowRoot::setMixStyle);
+		ExStyle.Init(this, &CWindowRoot::getExStyle, &CWindowRoot::setExStyle, &CWindowRoot::setMixExStyle);
 
-		Width. Init(this, &CWindowRoot::getWidth,  &CWindowRoot::setWidth);
-		Height.Init(this, &CWindowRoot::getHeight, &CWindowRoot::setHeight);
-		Left.  Init(this, &CWindowRoot::getLeft,   &CWindowRoot::setLeft);
-		Top.   Init(this, &CWindowRoot::getTop,    &CWindowRoot::setTop);
+		Width. Init(this, &CWindowRoot::getWidth,  &CWindowRoot::setWidth,  &CWindowRoot::setMixWidth);
+		Height.Init(this, &CWindowRoot::getHeight, &CWindowRoot::setHeight, &CWindowRoot::setMixHeight);
+		Left.  Init(this, &CWindowRoot::getLeft,   &CWindowRoot::setLeft,   &CWindowRoot::setMixLeft);
+		Top.   Init(this, &CWindowRoot::getTop,    &CWindowRoot::setTop,    &CWindowRoot::setMixTop);
 	}
 
 	bool CWindowRoot::Create(CWindowHandle Parent, WndInfo & Info)
@@ -29,31 +29,39 @@ namespace Window
 
 	void CWindowRoot::WindowParamsChangingProcessor(System::CMessage * Event)
 	{
+		union
+		{
+			CREATESTRUCT * CrStruct;
+			WINDOWPOS    * PosStruct;
+			STYLESTRUCT  * StStruct;
+
+		} MsgData;
+
 		switch (Event->Message)
 		{
 		case WM_NCCREATE:
-			CREATESTRUCT * CrStruct;
-			CrStruct = ((CREATESTRUCT*)Event->LParam);
-			m_Left   = CrStruct->x;
-			m_Top    = CrStruct->y;
-			m_Width  = CrStruct->cx;
-			m_Height = CrStruct->cy;
+			MsgData.CrStruct = ((CREATESTRUCT*)Event->LParam);
+			m_Left    = MsgData.CrStruct->x;
+			m_Top     = MsgData.CrStruct->y;
+			m_Width   = MsgData.CrStruct->cx;
+			m_Height  = MsgData.CrStruct->cy;
+			m_Style   = MsgData.CrStruct->style;
+			m_ExStyle = MsgData.CrStruct->dwExStyle;
 			Event->Result = TRUE;
 			break;
 
 		case WM_WINDOWPOSCHANGED:
-			WINDOWPOS * PosStruct;
-			PosStruct = ((WINDOWPOS*)Event->LParam);
-			if (!(PosStruct->flags & SWP_NOMOVE))
+			MsgData.PosStruct = ((WINDOWPOS*)Event->LParam);
+			if (!(MsgData.PosStruct->flags & SWP_NOMOVE))
 			{
-				m_Left = PosStruct->x;
-				m_Top  = PosStruct->y;
+				m_Left = MsgData.PosStruct->x;
+				m_Top  = MsgData.PosStruct->y;
 			}
 
-			if (!(PosStruct->flags & SWP_NOSIZE))
+			if (!(MsgData.PosStruct->flags & SWP_NOSIZE))
 			{
-				m_Width  = PosStruct->cx;
-				m_Height = PosStruct->cy;
+				m_Width  = MsgData.PosStruct->cx;
+				m_Height = MsgData.PosStruct->cy;
 			}
 			Event->Result = 0;
 			break;
@@ -71,13 +79,12 @@ namespace Window
 			break;
 
 		case WM_STYLECHANGED:
-			STYLESTRUCT * StStruct = (STYLESTRUCT*)Event->LParam;
-
+			MsgData.StStruct = (STYLESTRUCT*)Event->LParam;
 			if (Event->WParam == GWL_STYLE)
-				m_Style.SetValue(StStruct->styleNew);
+				m_Style = MsgData.StStruct->styleNew;
 
 			if (Event->WParam == GWL_EXSTYLE)
-				m_ExStyle.SetValue(StStruct->styleNew);
+				m_ExStyle = MsgData.StStruct->styleNew;
 
 			Event->Result = 0;
 			break;

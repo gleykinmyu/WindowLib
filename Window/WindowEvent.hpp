@@ -58,17 +58,17 @@ namespace Window
 
 	inline CWindowEvent* CWindowEvent::getWndThis(HWND Handle)
 	{
-		return (CWindowEvent*)WindowMap.getWindowThis(Handle);
+		return (CWindowEvent*)wl::Module->WindowTable.getWindowThis(Handle);
 	}
 
 	inline bool CWindowEvent::setWndThis(HWND Handle, CWindowEvent * This)
 	{
-		return WindowMap.AddWindow(Handle, This);
+		return wl::Module->WindowTable.AddWindow(Handle, This);
 	}
 
 	inline bool CWindowEvent::clearWndThis(HWND Handle)
 	{
-		return WindowMap.DeleteWindow(Handle);
+		return wl::Module->WindowTable.DeleteWindow(Handle);
 	}
 
 	inline bool CWindowEvent::Create(CWindowHandle Parent, LPCTSTR ClassName, WndInfo & Info)

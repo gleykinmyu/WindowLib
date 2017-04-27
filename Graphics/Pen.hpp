@@ -21,7 +21,6 @@ namespace Graphics
 	{
 	public:
 		CPen();
-
 		Utility::CProperty<Utility::RO, CColor,    CPenG> Color;
 		Utility::CProperty<Utility::RO, EPenStyle, CPenG> Style;
 		Utility::CProperty<Utility::RO, int,       CPenG> Width;

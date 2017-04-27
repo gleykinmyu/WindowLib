@@ -11,7 +11,7 @@
                                                                                                                    \
     public:                                                                                                        \
         inline CBitMaskSafeT_##MaskType##_##ConstsEnumType(ConstsEnumType Flag) : Value(Flag) {}                   \
-     inline CBitMaskSafeT_##MaskType##_##ConstsEnumType(const CBitMaskSafeT_##MaskType##_##ConstsEnumType & Mask) : Value(Mask.Value) {}\
+        inline CBitMaskSafeT_##MaskType##_##ConstsEnumType(const CBitMaskSafeT_##MaskType##_##ConstsEnumType & Mask) : Value(Mask.Value) {}\
                                                                                                                    \
         inline operator MaskType() const                                                                           \
         {                                                                                                          \
@@ -40,14 +40,16 @@
 			return CBitMaskSafeT_##MaskType##_##ConstsEnumType(Value | Mask.Value);                                \
 		}                                                                                                          \
                                                                                                                    \
-		inline void SetValue(MaskType Value)                                                                       \
+		inline const CBitMaskSafeT_##MaskType##_##ConstsEnumType & SetValue(MaskType Value)                        \
 		{                                                                                                          \
 			Value = Value;    																			           \
+            return *this;                                                                                          \
 		}                                                                                                          \
                                                                                                                    \
-		inline void AddValue(MaskType Value)                                                                       \
+		inline const CBitMaskSafeT_##MaskType##_##ConstsEnumType & AddValue(MaskType Value)                        \
 		{                                                                                                          \
 			Value |= Value;    																			           \
+			return *this;                                                                                          \
 		}                                                                                                          \
                                                                                                                    \
         friend CBitMaskSafeT_##MaskType##_##ConstsEnumType operator| (ConstsEnumType, ConstsEnumType);             \

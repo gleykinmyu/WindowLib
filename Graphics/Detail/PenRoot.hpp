@@ -71,6 +71,10 @@ namespace GraphicsDetail
 		void setStyle(const Graphics::EPenStyle & Style);
 		void setWidth(int Width);
 		Graphics::CDeviceContext & m_OwnDC;
+	
+	protected:
+		void setMixWidth(int Width);
+
 	private:
 		void wl_Replace(LOGPEN * LogPen);
 	};
@@ -101,6 +105,16 @@ namespace GraphicsDetail
 		LOGPEN logPen = {};
 		getInfo(&logPen);
 		logPen.lopnWidth.x = Width;
+		logPen.lopnWidth.y = 0;
+		wl_Replace(&logPen);
+	}
+
+	inline void CPenS::setMixWidth(int Width)
+	{
+		LOGPEN logPen = {};
+		getInfo(&logPen);
+		logPen.lopnWidth.x += Width;
+		WL_ASSERT(logPen.lopnWidth.x >= 0);
 		logPen.lopnWidth.y = 0;
 		wl_Replace(&logPen);
 	}

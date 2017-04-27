@@ -14,7 +14,7 @@ namespace Window
 		ClsStruct.ciMenuName   = 0;
 		ClsStruct.ciClassName  = NULL;
 		ClsStruct.ciIconSm     = 0;
-		ClsStruct.ciInstance   = System::Module->Instance;
+		ClsStruct.ciInstance   = wl::Module->Instance;
 		ClsStruct.ciWndProc    = NULL;
 	}
 
@@ -77,7 +77,7 @@ namespace Window
 		WndStruct.cbSize = sizeof(WNDCLASSEX);
 		setSuperProcedure(WndStruct.lpfnWndProc);
 		WndStruct.lpfnWndProc = CWindowEvent::StartWindowProcedure;
-		WndStruct.hInstance = System::Module->Instance;
+		WndStruct.hInstance = wl::Module->Instance;
 		WndStruct.lpszClassName = ClassName ?
 			ClassName : wl_FormatClassName();
 

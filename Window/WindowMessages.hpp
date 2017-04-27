@@ -94,46 +94,46 @@
 
 // LRESULT OnCreate(CREATESTRUCT* CreateStruct)
 #define WL_CREATE_HANDLER(func) \
-case WM_CREATE: Event->Result = func((CREATESTRUCT*)Event->LParam); return false;
+case WM_CREATE: Event->Result = func((CREATESTRUCT*)Event->LParam); return true;
 
 // void OnDestroy()
 #define WL_DESTROY_HANDLER(func) \
-case WM_DESTROY: Event->Result = 0; func(); return false;
+case WM_DESTROY: Event->Result = 0; func(); return true;
 
 // void OnMove(int Left, int Top)
 #define WL_MOVE_HANDLER(func) \
-case WM_MOVE: Event->Result = 0; func(GET_X_LPARAM(Event->LParam), GET_Y_LPARAM(Event->LParam)); return false;
+case WM_MOVE: Event->Result = 0; func(GET_X_LPARAM(Event->LParam), GET_Y_LPARAM(Event->LParam)); return true;
 
 // void OnSize(UINT Type, int Width, int Height)
 #define WL_SIZE_HANDLER(func) \
-case WM_SIZE: Event->Result = 0; func((UINT)Event->WParam, GET_X_LPARAM(Event->LParam), GET_Y_LPARAM(Event->LParam)); return false;
+case WM_SIZE: Event->Result = 0; func((UINT)Event->WParam, GET_X_LPARAM(Event->LParam), GET_Y_LPARAM(Event->LParam)); return true;
 
 // void OnActivate(UINT State, bool Minimized, HWND Other)
 #define WL_ACTIVATE_HANDLER(func) \
-case WM_ACTIVATE: Event->Result = 0; func((UINT)LOWORD(Event->WParam), (bool)HIWORD(Event->WParam), (HWND)Event->LParam); return false;
+case WM_ACTIVATE: Event->Result = 0; func((UINT)LOWORD(Event->WParam), (bool)HIWORD(Event->WParam), (HWND)Event->LParam); return true;
 
 // void OnSetFocus(HWND OldWnd)
 #define WL_SETFOCUS_HANDLER(func) \
-case WM_SETFOCUS: Event->Result = 0; func((HWND)Event->WParam); return false;
+case WM_SETFOCUS: Event->Result = 0; func((HWND)Event->WParam); return true;
 
 // void OnKillFocus(HWND FocusWnd)
 #define WL_KILLFOCUS_HANDLER(func) \
-case WM_KILLFOCUS: Event->Result = 0; func((HWND)Event->WParam); return false;
+case WM_KILLFOCUS: Event->Result = 0; func((HWND)Event->WParam); return true;
 
 // void OnEnable(bool Enabled)
 #define WL_ENABLE_HANDLER(func) \
-case WM_ENABLE: Event->Result = 0; func((bool)Event->WParam); return false;
+case WM_ENABLE: Event->Result = 0; func((bool)Event->WParam); return true;
 
 // void OnPaint()
 #define WL_PAINT_HANDLER(func) \
-case WM_PAINT: Event->Result = 0; func(); return false;
+case WM_PAINT: Event->Result = 0; func(); return true;
 
 // void OnClose()
 #define WL_CLOSE_HANDLER(func) \
-case WM_CLOSE: Event->Result = 0; func(); return false;
+case WM_CLOSE: Event->Result = 0; func(); return true;
 
 // void OnTimer(UINT_PTR nIDEvent)
 #define WL_TIMER_HANDLER(func) \
-case WM_TIMER: Event->Result = 0; func((UINT_PTR)Event->WParam); return false;
+case WM_TIMER: Event->Result = 0; func((UINT_PTR)Event->WParam); return true;
 
 #endif // !WL_WINDOW_MESSAGES_HPP

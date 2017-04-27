@@ -10,11 +10,13 @@
 
 namespace Window
 {
-    class WL_NOVTABLE CWindowRoot : public CWindowDecl
+#define WL_SETWNDPOS_NOFLAGS SWP_NOSENDCHANGING | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER
+
+    class CWindowRoot : public CWindowDecl
     {
 		typedef Utility::CProperty<Utility::RW, int,         CWindowRoot> rwINT;
-		typedef Utility::CProperty<Utility::RW, CWndStyle,   CWindowRoot> rwSTYLE;
-		typedef Utility::CProperty<Utility::RW, CWndExStyle, CWindowRoot> rwEXSTYLE;
+		typedef CWndStylePropertyT<WNDSTYLE, EWndStyles,     CWindowRoot> rwSTYLE;
+		typedef CWndStylePropertyT<WNDEXSTYLE, EWndExStyles, CWindowRoot> rwEXSTYLE;
 
     public:
 		CWindowRoot();
@@ -33,24 +35,34 @@ namespace Window
 	private:
 		int m_Left, m_Top, m_Width, m_Height;
 
-		CWndStyle   m_Style;
-		CWndExStyle m_ExStyle;
+		WNDSTYLE   m_Style;
+		WNDEXSTYLE m_ExStyle;
 
 		inline int getTop()    const;
 		inline int getLeft()   const;
 		inline int getWidth()  const;
 		inline int getHeight() const;
 
-		inline CWndStyle   getStyle()  const;
-		inline CWndExStyle getExStyle() const;
+		inline WNDSTYLE   getStyle()  const;
+		inline WNDEXSTYLE getExStyle() const;
 
 		inline void setTop   (int Top);
-		inline void setLeft  (int Left);
-		inline void setWidth (int Width);
-		inline void setHeight(int Height);
+		inline void setMixTop(int Top);
 
-		inline void setStyle  (const CWndStyle   & Style);
-		inline void setExStyle(const CWndExStyle & ExStyle);
+		inline void setLeft   (int Left);
+		inline void setMixLeft(int Left);
+
+		inline void setWidth   (int Width);
+		inline void setMixWidth(int Width);
+
+		inline void setHeight   (int Height);
+		inline void setMixHeight(int Height);
+
+		inline void setStyle     (WNDSTYLE   Style);
+		inline void setMixStyle  (WNDSTYLE   Style);
+
+		inline void setExStyle   (WNDEXSTYLE ExStyle);
+		inline void setMixExStyle(WNDEXSTYLE ExStyle);
 
 		virtual void WindowParamsChangingProcessor(System::CMessage * Event);
     };
@@ -75,44 +87,75 @@ namespace Window
 		return m_Height;
 	}
 
-	inline CWndStyle CWindowRoot::getStyle() const
+	inline WNDSTYLE CWindowRoot::getStyle() const
 	{
 		return m_Style;
 	}
 
-	inline CWndExStyle CWindowRoot::getExStyle() const
+	inline WNDEXSTYLE CWindowRoot::getExStyle() const
 	{
 		return m_ExStyle;
 	}
 
 	inline void CWindowRoot::setTop(int Top)
 	{
-		setPos(HWND_TOPMOST, m_Left, Top, 0, 0, SWP_NOSIZE | SWP_NOSENDCHANGING | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+		setPos(HWND_TOPMOST, m_Left, Top, 0, 0, SWP_NOSIZE | WL_SETWNDPOS_NOFLAGS);
+	}
+
+	inline void CWindowRoot::setMixTop(int Top)
+	{
+		setPos(HWND_TOPMOST, m_Left, Top + m_Top, 0, 0, SWP_NOSIZE | WL_SETWNDPOS_NOFLAGS);
 	}
 
 	inline void CWindowRoot::setLeft(int Left)
 	{
-		setPos(HWND_TOPMOST, Left, m_Top, 0, 0, SWP_NOSIZE | SWP_NOSENDCHANGING | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+		setPos(HWND_TOPMOST, Left, m_Top, 0, 0, SWP_NOSIZE | WL_SETWNDPOS_NOFLAGS);
+	}
+
+	inline void CWindowRoot::setMixLeft(int Left)
+	{
+		setPos(HWND_TOPMOST, Left + m_Left, m_Top, 0, 0, SWP_NOSIZE | WL_SETWNDPOS_NOFLAGS);
 	}
 
 	inline void CWindowRoot::setWidth(const int Width)
 	{
-		setPos(HWND_TOPMOST, 0, 0, m_Width, Width, SWP_NOMOVE | SWP_NOSENDCHANGING | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+		setPos(HWND_TOPMOST, 0, 0, Width, m_Height, SWP_NOMOVE | WL_SETWNDPOS_NOFLAGS);
+	}
+
+	inline void CWindowRoot::setMixWidth(int Width)
+	{
+		setPos(HWND_TOPMOST, 0, 0, m_Width + Width, m_Height, SWP_NOMOVE | WL_SETWNDPOS_NOFLAGS);
+
 	}
 
 	inline void CWindowRoot::setHeight(int Height)
 	{
-		setPos(HWND_TOPMOST, 0, 0, m_Width, Height, SWP_NOMOVE | SWP_NOSENDCHANGING | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+		setPos(HWND_TOPMOST, 0, 0, m_Width, Height, SWP_NOMOVE | WL_SETWNDPOS_NOFLAGS);
 	}
 
-	inline void CWindowRoot::setStyle(const CWndStyle & Style)
+	inline void CWindowRoot::setMixHeight(int Height)
 	{
-		CWindowDecl::setStyle(Style);
+		setPos(HWND_TOPMOST, 0, 0, m_Width, Height + m_Height, SWP_NOMOVE | WL_SETWNDPOS_NOFLAGS);
 	}
 
-	inline void CWindowRoot::setExStyle(const CWndExStyle & ExStyle)
+	inline void CWindowRoot::setStyle(WNDSTYLE Style)
 	{
-		CWindowDecl::setExStyle(ExStyle);
+		CWindowDecl::setStyle(CWndStyle().setValue(Style));
+	}
+
+	inline void CWindowRoot::setMixStyle(WNDSTYLE Style)
+	{
+		CWindowDecl::setStyle(CWndStyle().setValue(Style | m_Style));
+	}
+
+	inline void CWindowRoot::setExStyle(WNDEXSTYLE ExStyle)
+	{
+		CWindowDecl::setExStyle(CWndExStyle().setValue(ExStyle));
+	}
+
+	inline void CWindowRoot::setMixExStyle(WNDEXSTYLE ExStyle)
+	{
+		CWindowDecl::setExStyle(CWndExStyle().setValue(ExStyle | m_ExStyle));
 	}
 }
 #endif //!WL_WINDOW_ROOT_H
